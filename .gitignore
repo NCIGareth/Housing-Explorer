@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+.pnpm-debug.log*
+
+# Large Data & Storage
+data/
+*.zip
+*.csv
+*.sql
+*.log
+
+# Build & Cache
+.turbo/
+dist/
+.next/
+out/
+build/
+
+# Environment / Secrets
+.env
+.env*.local
+
+# System Files
+Thumbs.db
+.DS_Store

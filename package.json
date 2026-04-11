@@ -1,0 +1,25 @@
+{
+  "name": "ireland-housing-explorer",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "typecheck": "turbo typecheck",
+    "db:generate": "pnpm --filter @housing/db db:generate",
+    "db:migrate": "node scripts/prisma-with-env.mjs migrate dev",
+    "db:seed": "node scripts/prisma-with-env.mjs db execute --file prisma/seed.sql --schema prisma/schema.prisma",
+    "ingest": "pnpm --filter @housing/ingestion ingest",
+    "ingest:ppr": "node scripts/run-with-root-env.mjs pnpm --filter @housing/ingestion exec tsx src/ppr-import.ts ../../PPR-ALL.csv",
+    "start": "next start"
+  },
+  "devDependencies": {
+    "dotenv": "^16.4.7",
+    "turbo": "^2.0.12",
+    "typescript": "^5.6.3"
+  }
+}
+

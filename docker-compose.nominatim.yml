@@ -1,0 +1,31 @@
+services:
+  nominatim:
+    image: mediagis/nominatim:4.4
+    container_name: ireland-nominatim
+    # PostgreSQL needs shared memory for performance/stability
+    shm_size: 2gb
+    environment:
+      # PBF_URL can stay, but the script will skip it since data exists in the volume
+      PBF_URL: https://download.openstreetmap.fr/extracts/europe/ireland-latest.osm.pbf
+      # Setting this to empty prevents the 'Failed to reach replication service' FATAL error
+      REPLICATION_URL: ""
+      IMPORT_STYLE: full
+      # Optimization for your 4-core/8-thread environment
+      NOMINATIM_POSTGRESQL_SHARED_BUFFERS: 2GB
+      NOMINATIM_POSTGRESQL_MAINTENANCE_WORK_MEM: 1GB
+    ports:
+      - "8080:8080"
+    volumes:
+      - nominatim-data:/var/lib/postgresql/14/main
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/status || exit 1"]
+      # Increased interval and timeout to prevent Docker from killing a busy container
+      interval: 60s
+      timeout: 30s
+      retries: 5
+      # Important: Gives the service 2 minutes to warm up before healthchecks start
+      start_period: 120s
+
+volumes:
+  nominatim-data:

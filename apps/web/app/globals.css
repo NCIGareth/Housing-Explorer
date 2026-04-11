@@ -1,0 +1,122 @@
+@import 'ol/ol.css';
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  /* System font stack for performance: no layout shifts waiting for webfonts */
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f8fafc; /* Slate-50: Easier on the eyes for data analysis */
+  color: #0f172a;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Global Table Reset
+   Since we have two large tables, let's ensure they don't 
+   feel cramped and have a nice hover effect.
+*/
+table {
+  width: 100%;
+  border-spacing: 0;
+}
+
+tr.row-hover:hover {
+  background-color: #f1f5f9; /* Subtle slate-100 hover */
+}
+
+/* Custom Scrollbar 
+   Essential for the 'max-h-[500px]' containers in your dashboard
+   to keep them looking like a cohesive app rather than a browser window.
+*/
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Card Utility */
+.card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Form Resets */
+input, select, button {
+  font-family: inherit;
+}
+
+/* Accessibility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Ensure the Map has a base height if not specified */
+.map-container {
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  background-color: #e2e8f0;
+}
+
+/* Add to globals.css */
+
+/* 1. Improve general readability across the app */
+body {
+  line-height: 1.6; /* Increased from 1.5 */
+}
+
+/* 2. Global Table Spacing */
+table {
+  border-spacing: 0;
+  border-collapse: separate; /* Allows for border-radius on rows if needed */
+}
+
+/* 3. Global Cell Padding (The "Breathing Room" fix) */
+th, td {
+  padding: 14px 16px !important; /* Forces more vertical space */
+  vertical-align: middle;
+}
+
+/* 4. Text Contrast and Spacing */
+.font-mono {
+  letter-spacing: -0.02em; /* Makes mono codes slightly tighter and more professional */
+}
+
+/* 5. Address stacking fix */
+.address-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* Space between Address and County */
+}

@@ -1,0 +1,53 @@
+services:
+  # --- Nominatim Service ---
+  nominatim:
+    image: mediagis/nominatim:4.4
+    container_name: ireland-nominatim
+    shm_size: 2gb
+    environment:
+      PBF_URL: https://download.openstreetmap.fr/extracts/europe/ireland-latest.osm.pbf
+      REPLICATION_URL: ""
+      IMPORT_STYLE: full
+      NOMINATIM_POSTGRESQL_SHARED_BUFFERS: 2GB
+      NOMINATIM_POSTGRESQL_MAINTENANCE_WORK_MEM: 1GB
+    ports:
+      - "8080:8080"
+    volumes:
+      - nominatim-data:/var/lib/postgresql/14/main
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/status || exit 1"]
+      interval: 60s
+      timeout: 30s
+      retries: 5
+      start_period: 120s
+
+  # --- Housing Database Service ---
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: housing-db
+    environment:
+      POSTGRES_DB: housing
+      POSTGRES_USER: housing
+      POSTGRES_PASSWORD: housing
+    ports:
+      - "5432:5432"
+    volumes:
+      - housing_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U housing -d housing"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # --- Mailhog Service ---
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: housing-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  nominatim-data:
+  housing_db:
