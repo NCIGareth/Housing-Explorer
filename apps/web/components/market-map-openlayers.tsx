@@ -78,9 +78,9 @@ function createMarkerStyle() {
 /* ================= COMPONENT ================= */
 
 export const MarketMap: React.FC<{
-  points?: any[]; // Legacy prop to avoid breaking current usage if not yet updated
+  points?: PprPoint[]; // Legacy prop to avoid breaking current usage if not yet updated
   pprPreview?: PprPoint[];
-}> = ({ pprPreview }) => {
+}> = ({ pprPreview, points }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -96,7 +96,8 @@ export const MarketMap: React.FC<{
     const map = mapInstance.current;
     if (!map) return;
 
-    const features = (pprPreview || [])
+    const dataToUse = pprPreview || points || [];
+    const features = dataToUse
       .map((point) => {
         const coords = resolvePointCoords(point);
         if (!coords) return null;
@@ -125,7 +126,7 @@ export const MarketMap: React.FC<{
         });
       }
     }
-  }, [pprPreview]);
+  }, [pprPreview, points]);
 
   /* ================= MAP INIT (RUN ONCE) ================= */
 
