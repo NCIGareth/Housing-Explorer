@@ -21,7 +21,7 @@ export async function getCsoMarketIndex(geography: string = "National - all resi
 }
 
 /** Aggregates the latest recorded crime statistics for stations within the specified county */
-export async function getLocalCrimeStats(county: string, limitRecentPeriods = 1) {
+export async function getLocalCrimeStats(county: string) {
   // We retrieve the latest year available first
   const latestMetric = await prisma.historicalMetric.findFirst({
     where: { metric: { startsWith: "crime_" } },
