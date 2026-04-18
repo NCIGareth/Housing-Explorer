@@ -39,24 +39,34 @@ export default async function Home({ searchParams }: PageProps) {
   const notFullMarketPrice = params.notFullMarketPrice === "on";
   const vatExclusive = params.vatExclusive === "on";
 
-  // Parallel Data Fetching
-  const [historical, pprSeries, pprSales, csoNational] = await Promise.all([
-    getHistoricalSeries(county),
-    getPprMedianPriceByMonth(county),
-    getRecentPprSales({ 
-      county, 
-      eircode, 
-      minPriceEur, 
-      maxPriceEur, 
-      propertyDescription: propertyType,
-      startDate,
-      endDate,
-      notFullMarketPrice: notFullMarketPrice ? true : undefined,
-      vatExclusive: vatExclusive ? true : undefined,
-      take: 100 
-    }),
-    getCsoMarketIndex("National - all residential properties")
-  ]);
+  // Parallel Data Fetching with graceful error handling for build-time/unreachable DB
+  let historical: Awaited<ReturnType<typeof getHistoricalSeries>> = [];
+  let pprSeries: Awaited<ReturnType<typeof getPprMedianPriceByMonth>> = [];
+  let pprSales: Awaited<ReturnType<typeof getRecentPprSales>> = [];
+  let csoNational: Awaited<ReturnType<typeof getCsoMarketIndex>> = [];
+
+  try {
+    const results = await Promise.all([
+      getHistoricalSeries(county),
+      getPprMedianPriceByMonth(county),
+      getRecentPprSales({ 
+        county, 
+        eircode, 
+        minPriceEur, 
+        maxPriceEur, 
+        propertyDescription: propertyType,
+        startDate,
+        endDate,
+        notFullMarketPrice: notFullMarketPrice ? true : undefined,
+        vatExclusive: vatExclusive ? true : undefined,
+        take: 100 
+      }),
+      getCsoMarketIndex("National - all residential properties")
+    ]);
+    [historical, pprSeries, pprSales, csoNational] = results;
+  } catch (error) {
+    console.warn("Failed to fetch market data during build/render:", error);
+  }
 
   // DATA RECOVERY LOGIC: 
   // If historical (CSO) is empty or only has 1 point, fallback to PPR series
