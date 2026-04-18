@@ -21,7 +21,13 @@ import Footer from "@/components/Footer";
 import { getLatestSaleDate } from "@/lib/queries";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const latestSaleDate = await getLatestSaleDate();
+  // Gracefully handle database being missing during build-time (Static Site Generation / SSG)
+  let latestSaleDate;
+  try {
+    latestSaleDate = await getLatestSaleDate();
+  } catch (error) {
+    console.warn("Failed to fetch latest sale date during build/render:", error);
+  }
   
   return (
     <html lang="en">
