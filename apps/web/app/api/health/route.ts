@@ -29,8 +29,8 @@ export async function GET() {
       prisma.user.count()
     ]);
 
-    const lastSuccessfulRun = recentRuns.find(run => run.status === 'SUCCESS');
-    const lastFailedRun = recentRuns.find(run => run.status === 'FAILED');
+    const lastSuccessfulRun = recentRuns.find((run: typeof recentRuns[0]) => run.status === 'SUCCESS');
+    const lastFailedRun = recentRuns.find((run: typeof recentRuns[0]) => run.status === 'FAILED');
 
     return NextResponse.json({
       status: "healthy",
