@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 import { sendAlertEmail } from "@/lib/mailer";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
