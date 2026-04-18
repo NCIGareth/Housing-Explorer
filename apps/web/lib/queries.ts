@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "./db";
 
 
@@ -51,7 +51,7 @@ export async function getLocalCrimeStats(county: string) {
 export async function getPprMedianPriceByMonth(county: string) {
   // We cast to any then to PrismaClient to bypass the "Untyped function" error
   // which occurs during Vercel builds due to monorepo type-resolution lag.
-  return (prisma as PrismaClient).$queryRaw<Array<{ period: string; value: number }>>(
+  return (prisma as unknown as PrismaClient).$queryRaw<Array<{ period: string; value: number }>>(
     Prisma.sql`
       SELECT to_char(date_trunc('month', "saleDate"), 'YYYY-MM') AS period,
              (percentile_cont(0.5) WITHIN GROUP (ORDER BY "priceEur"::float))::float AS value
