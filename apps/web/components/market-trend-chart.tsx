@@ -27,7 +27,7 @@ export function MarketTrendChart({ data, title = "Residential Property Price Ind
   // Format period strings into sortable dates and downsample if needed
   const formattedData = useMemo(() => {
     return data
-      .map(d => {
+      .map((d: typeof data[0]) => {
         // CSO format is YYYYMxx e.g. 2015M01
         const year = d.period.substring(0, 4);
         const month = d.period.substring(5, 7);

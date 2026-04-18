@@ -84,7 +84,7 @@ export const FilterPanel = React.memo(function FilterPanel({
           <div>
             <label htmlFor="county" style={labelStyle}>County</label>
             <select id="county" name="county" defaultValue={county ?? "Dublin"} style={inputStyle}>
-              {COUNTIES.map(c => <option key={c} value={c}>{c}</option>)}
+              {COUNTIES.map((c: string) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
 
@@ -139,7 +139,7 @@ export const FilterPanel = React.memo(function FilterPanel({
 
         {/* Presets */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-          {PRICE_PRESETS.map(preset => (
+          {PRICE_PRESETS.map((preset: typeof PRICE_PRESETS[0]) => (
             <button
               key={preset.label}
               type="button"

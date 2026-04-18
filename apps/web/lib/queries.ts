@@ -41,7 +41,7 @@ export async function getLocalCrimeStats(county: string, limitRecentPeriods = 1)
     orderBy: { _sum: { value: "desc" } }
   });
 
-  return grouped.map(g => ({
+  return grouped.map((g: typeof grouped[0]) => ({
     category: g.metric.replace("crime_", "").trim(),
     incidents: g._sum.value || 0
   }));
@@ -120,7 +120,7 @@ export async function getCounties() {
     by: ["county"],
     orderBy: { county: "asc" }
   });
-  return counties.map(c => c.county).filter(Boolean);
+  return counties.map((c: typeof counties[0]) => c.county).filter(Boolean);
 }
 
 /** Get top localities/addresses by transaction count */
@@ -132,7 +132,7 @@ export async function getLocalities(county?: string, limit: number = 30) {
     orderBy: { _count: { id: "desc" } },
     take: limit
   });
-  return localities.map(l => l.address).filter(Boolean);
+  return localities.map((l: typeof localities[0]) => l.address).filter(Boolean);
 }
 
 /** Get property type descriptions */
@@ -142,7 +142,7 @@ export async function getPropertyTypes() {
     _count: { id: true },
     orderBy: { _count: { id: "desc" } }
   });
-  return types.map(t => t.descriptionOfProperty).filter(Boolean);
+  return types.map((t: typeof types[0]) => t.descriptionOfProperty).filter(Boolean);
 }
 /** Get the date of the most recent sale in the database */
 export async function getLatestSaleDate() {
