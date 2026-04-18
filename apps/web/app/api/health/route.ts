@@ -53,7 +53,7 @@ export async function GET() {
           finishedAt: lastFailedRun.finishedAt,
           error: lastFailedRun.error
         } : null,
-        recentRuns: recentRuns.map(run => ({
+        recentRuns: recentRuns.map((run: typeof recentRuns[0]) => ({
           source: run.source,
           status: run.status,
           startedAt: run.startedAt,

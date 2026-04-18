@@ -74,7 +74,7 @@ export default async function Home({ searchParams }: PageProps) {
   const rawChartData = useCso ? historical : pprSeries;
 
   // Explicit casting to ensure Recharts doesn't receive strings
-  const chartData = rawChartData.map((d) => ({
+  const chartData = rawChartData.map((d: typeof rawChartData[0]) => ({
     period: d.period,
     value: Number(d.value) || 0
   }));

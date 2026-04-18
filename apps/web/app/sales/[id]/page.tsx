@@ -46,7 +46,7 @@ export default async function PprSaleDetailPage({ params }: Props) {
   const addressNumberMatch = sale.address.match(/(?:\b|^)(\d+)(?:\b|[A-Za-z])/);
   const houseNumber = addressNumberMatch ? addressNumberMatch[1] : null;
 
-  const fullHistory = candidateHistory.filter(h => {
+  const fullHistory = candidateHistory.filter((h: typeof candidateHistory[0]) => {
     if (h.id === sale.id) return true;
     
     // If both have numbers at the start of their text, they must match
@@ -207,7 +207,7 @@ export default async function PprSaleDetailPage({ params }: Props) {
           <div className="bg-slate-900 p-5 rounded-2xl shadow-xl space-y-4">
             <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Sales History on Record</h3>
             <ul className="space-y-4">
-              {fullHistory.map((h) => (
+              {fullHistory.map((h: typeof fullHistory[0]) => (
                 <li key={h.id} className="flex justify-between items-center group">
                   <div className="flex flex-col">
                     <span className="text-xs font-bold text-white group-hover:text-blue-400 transition-colors">{h.saleDate.getFullYear()}</span>
