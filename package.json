@@ -28,7 +28,7 @@
       "esbuild",
       "prisma",
       "sharp",
-      "unjs-resolver"
+      "unrs-resolver"
     ]
   }
 }
