@@ -19,6 +19,8 @@ if (existsSync(envPath)) {
 }
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  transpilePackages: ["@housing/db", "@housing/shared"],
+};
 
 export default nextConfig;

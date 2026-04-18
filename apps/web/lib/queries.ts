@@ -49,7 +49,9 @@ export async function getLocalCrimeStats(county: string) {
 
 /** Monthly median sale price (EUR) from the Property Price Register. */
 export async function getPprMedianPriceByMonth(county: string) {
-  return prisma.$queryRaw<Array<{ period: string; value: number }>>(
+  // We cast to any then to PrismaClient to bypass the "Untyped function" error
+  // which occurs during Vercel builds due to monorepo type-resolution lag.
+  return (prisma as PrismaClient).$queryRaw<Array<{ period: string; value: number }>>(
     Prisma.sql`
       SELECT to_char(date_trunc('month', "saleDate"), 'YYYY-MM') AS period,
              (percentile_cont(0.5) WITHIN GROUP (ORDER BY "priceEur"::float))::float AS value
