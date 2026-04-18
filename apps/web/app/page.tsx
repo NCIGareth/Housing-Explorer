@@ -10,6 +10,8 @@ import {
 } from "@/lib/queries";
 import { MarketTrendChart } from "@/components/market-trend-chart";
 
+export const dynamic = "force-dynamic";
+
 type PageProps = {
   searchParams: Promise<{
     county?: string;

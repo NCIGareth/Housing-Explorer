@@ -12,6 +12,8 @@ import {
   getGoogleMapsUrl
 } from "@/lib/external-links";
 
+export const dynamic = "force-dynamic";
+
 type Props = { params: Promise<{ id: string }> };
 
 export default async function PprSaleDetailPage({ params }: Props) {
