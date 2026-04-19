@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/db";
-import { getLocalCrimeStats } from "@/lib/queries";
+import { getPropertyById, getLocalCrimeStats, getRecentPprSales } from "@/lib/queries";
 import ClientMapView from "@/components/client-map-view";
 import { CrimeStatsGrid } from "@/components/crime-stats-grid";
 import { 
@@ -17,10 +16,15 @@ export const dynamic = "force-dynamic";
 type Props = { params: Promise<{ id: string }> };
 
 export default async function PprSaleDetailPage({ params }: Props) {
+  // Skip execution during build phase to prevent database connectivity crashes
+  if (process.env.NEXT_PHASE === "phase-production-build") {
+    return null;
+  }
+
   const { id } = await params;
   
-  // 1. Fetch the specific sale
-  const sale = await prisma.propertySale.findUnique({ where: { id } });
+  // 1. Fetch the specific sale using the build-safe query
+  const sale = await getPropertyById(id);
 
   if (!sale) {
     notFound();
@@ -31,15 +35,12 @@ export default async function PprSaleDetailPage({ params }: Props) {
   const normalizedEircode = sale.eircode;
 
   const [candidateHistory, crimeStats] = await Promise.all([
-    normalizedEircode 
-      ? prisma.propertySale.findMany({
-          where: { eircode: normalizedEircode },
-          orderBy: { saleDate: 'desc' }
-        })
-      : prisma.propertySale.findMany({
-          where: { address: sale.address, county: sale.county },
-          orderBy: { saleDate: 'desc' }
-        }),
+    getRecentPprSales({
+      county: sale.county,
+      eircode: sale.eircode || undefined,
+      propertyDescription: sale.eircode ? undefined : sale.address, // Fallback if no eircode
+      take: 50
+    }),
     getLocalCrimeStats(sale.county)
   ]);
 

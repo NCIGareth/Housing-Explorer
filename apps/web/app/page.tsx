@@ -28,6 +28,11 @@ type PageProps = {
 };
 
 export default async function Home({ searchParams }: PageProps) {
+  // Skip execution during build phase to prevent database connectivity crashes
+  if (process.env.NEXT_PHASE === "phase-production-build") {
+    return null;
+  }
+
   const params = await searchParams;
   
   const county = params.county ?? "Dublin";

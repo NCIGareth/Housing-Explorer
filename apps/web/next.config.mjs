@@ -19,6 +19,10 @@ if (existsSync(envPath)) {
 }
 
 /** @type {import('next').NextConfig} */
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = "postgres://build_user:build_pass@localhost:5432/build_db";
+}
+
 const nextConfig = {
   transpilePackages: ["@housing/db", "@housing/shared"],
 };

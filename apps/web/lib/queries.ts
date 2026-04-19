@@ -1,8 +1,17 @@
-import { Prisma, PrismaClient } from "@prisma/client";
-import { prisma } from "./db";
+import { PrismaClient } from "@prisma/client";
 
+/** Universal check for Next.js build phase */
+const isBuildPhase = () => process.env.NEXT_PHASE === "phase-production-build";
+
+/** Lazy-loader for Prisma to prevent initialization crashes during build worker startup */
+async function getDb() {
+  const { prisma } = await import("./db");
+  return prisma as unknown as PrismaClient;
+}
 
 export async function getHistoricalSeries(geography: string) {
+  if (isBuildPhase()) return [];
+  const prisma = await getDb();
   return prisma.historicalMetric.findMany({
     where: { geography, metric: "residential_price_index" },
     orderBy: { period: "asc" }
@@ -11,6 +20,8 @@ export async function getHistoricalSeries(geography: string) {
 
 /** Fetches the official CSO Residential Property Price Index timeseries */
 export async function getCsoMarketIndex(geography: string = "National - all residential properties") {
+  if (isBuildPhase()) return [];
+  const prisma = await getDb();
   return prisma.historicalMetric.findMany({
     where: { 
       metric: "RPPI",
@@ -22,6 +33,9 @@ export async function getCsoMarketIndex(geography: string = "National - all resi
 
 /** Aggregates the latest recorded crime statistics for stations within the specified county */
 export async function getLocalCrimeStats(county: string) {
+  if (isBuildPhase()) return [];
+  const prisma = await getDb();
+  
   // We retrieve the latest year available first
   const latestMetric = await prisma.historicalMetric.findFirst({
     where: { metric: { startsWith: "crime_" } },
@@ -41,7 +55,7 @@ export async function getLocalCrimeStats(county: string) {
     orderBy: { _sum: { value: "desc" } }
   });
 
-  return grouped.map((g: typeof grouped[0]) => ({
+  return grouped.map((g: { metric: string; _sum: { value: number | null } }) => ({
     category: g.metric.replace("crime_", "").trim(),
     incidents: g._sum.value || 0
   }));
@@ -49,9 +63,10 @@ export async function getLocalCrimeStats(county: string) {
 
 /** Monthly median sale price (EUR) from the Property Price Register. */
 export async function getPprMedianPriceByMonth(county: string) {
-  // We use the tagged template literal syntax directly on $queryRaw and cast the result
-  // to bypass persistent monorepo type-resolution issues with generics and helpers.
-  const result = await (prisma as unknown as PrismaClient).$queryRaw`
+  if (isBuildPhase()) return [];
+  const prisma = await getDb();
+
+  const result = await prisma.$queryRaw`
       SELECT to_char(date_trunc('month', "saleDate"), 'YYYY-MM') AS period,
              (percentile_cont(0.5) WITHIN GROUP (ORDER BY "priceEur"::float))::float AS value
       FROM "PropertySale"
@@ -60,7 +75,6 @@ export async function getPprMedianPriceByMonth(county: string) {
       ORDER BY date_trunc('month', "saleDate")
   `;
   return result as Array<{ period: string; value: number }>;
-
 }
 
 export async function getRecentPprSales(params: {
@@ -75,6 +89,9 @@ export async function getRecentPprSales(params: {
   vatExclusive?: boolean;
   take?: number;
 }) {
+  if (isBuildPhase()) return [];
+  const prisma = await getDb();
+
   const eircodeFilter = params.eircode
     ? { eircode: { contains: params.eircode, mode: 'insensitive' as const } }
     : {};
@@ -118,15 +135,19 @@ export async function getRecentPprSales(params: {
 
 /** Get all counties with sales data */
 export async function getCounties() {
+  if (isBuildPhase()) return [];
+  const prisma = await getDb();
   const counties = await prisma.propertySale.groupBy({
     by: ["county"],
     orderBy: { county: "asc" }
   });
-  return counties.map((c: typeof counties[0]) => c.county).filter(Boolean);
+  return counties.map((c: { county: string | null }) => c.county).filter(Boolean) as string[];
 }
 
 /** Get top localities/addresses by transaction count */
 export async function getLocalities(county?: string, limit: number = 30) {
+  if (isBuildPhase()) return [];
+  const prisma = await getDb();
   const localities = await prisma.propertySale.groupBy({
     by: ["address"],
     _count: { id: true },
@@ -134,23 +155,36 @@ export async function getLocalities(county?: string, limit: number = 30) {
     orderBy: { _count: { id: "desc" } },
     take: limit
   });
-  return localities.map((l: typeof localities[0]) => l.address).filter(Boolean);
+  return localities.map((l: { address: string | null }) => l.address).filter(Boolean) as string[];
 }
 
 /** Get property type descriptions */
 export async function getPropertyTypes() {
+  if (isBuildPhase()) return [];
+  const prisma = await getDb();
   const types = await prisma.propertySale.groupBy({
     by: ["descriptionOfProperty"],
     _count: { id: true },
     orderBy: { _count: { id: "desc" } }
   });
-  return types.map((t: typeof types[0]) => t.descriptionOfProperty).filter(Boolean);
+  return types.map((t: { descriptionOfProperty: string | null }) => t.descriptionOfProperty).filter(Boolean) as string[];
 }
+
 /** Get the date of the most recent sale in the database */
 export async function getLatestSaleDate() {
+  if (isBuildPhase()) return null;
+  const prisma = await getDb();
   const latest = await prisma.propertySale.findFirst({
     orderBy: { saleDate: "desc" },
     select: { saleDate: true }
   });
   return latest?.saleDate;
+}
+
+export async function getPropertyById(id: string) {
+  if (isBuildPhase()) return null;
+  const prisma = await getDb();
+  return prisma.propertySale.findUnique({
+    where: { id }
+  });
 }
