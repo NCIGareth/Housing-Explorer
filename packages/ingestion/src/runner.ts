@@ -20,7 +20,6 @@ if (process.env.DATABASE_URL) {
 
 // 3. Import logic that DOES NOT depend on Prisma at the top level
 import { fetchCsoMetrics, upsertCsoMetrics } from "./modules/cso";
-import { fetchApprovedFeedListings, upsertApprovedFeedListings } from "./modules/feed";
 import { logError, logInfo } from "./lib/logger";
 
 // 4. Declare a variable for prisma that will be populated later
@@ -71,9 +70,6 @@ async function runAllIngestion() {
   }
 
   await runIngestion("CSO", async () => upsertCsoMetrics(await fetchCsoMetrics()));
-  await runIngestion("APPROVED_FEED", async () =>
-    upsertApprovedFeedListings(await fetchApprovedFeedListings())
-  );
 }
 
 // 5. The "Brain" - Controls the sequence
