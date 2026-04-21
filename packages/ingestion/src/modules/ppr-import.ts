@@ -24,7 +24,11 @@ import { propertySaleSchema } from "@housing/shared";
 import { logError, logInfo } from "../lib/logger";
 import pLimit from "p-limit";
 
-const limit = pLimit(150);
+// 1. Concurrency limit: We process up to 50 rows in parallel. 
+// Note: We use 50 (instead of 150) to stay within Supabase Free Tier worker limits.
+const limit = pLimit(50);
+
+// 2. Geocoding Cache: Minimizes redundant API calls to your local Nominatim instance.
 const geoCache = new Map<string, { lat: number | null; lon: number | null; precision: string }>();
 
 type PprCsvRow = Record<string, string>;
@@ -121,16 +125,18 @@ async function fetchCoordinates(eircode?: string, address?: string, county?: str
 /* ================= PIPELINE ================= */
 
 async function cleanRow(raw: Record<string, string>) {
+  // Convert CSV strings into structured data types
   const saleDate = parseIrishDate(getSaleDate(raw));
   const priceEur = parseEuroAmountToInt(getPriceRaw(raw));
   const address = getCell(raw, "Address").trim().replace(/\s+/g, " ");
   const county = getCell(raw, "County").trim();
   const eircode = normalizeEircode(getCell(raw, "Eircode"));
 
+  // Call local Nominatim (Docker) to get coordinates
   const coords = await fetchCoordinates(eircode, address, county);
 
   const data = {
-    sourceKey: "",
+    sourceKey: "", // Unique identifier for deduplication
     saleDate,
     address,
     county,
@@ -166,11 +172,8 @@ async function processRow(record: any) {
 /* ================= SYNC LOGIC ================= */
 
 /**
- * The Property Price Register (PPR) website uses a predictable URL pattern for monthly downloads:
- * Pattern: https://www.propertypriceregister.ie/website/npsra/pprweb.nsf/0/5C5D7606093556FE8025875C003D1974/$FILE/PPR-[YEAR]-[MONTH].csv
- * Example: https://www.propertypriceregister.ie/website/npsra/pprweb.nsf/0/5C5D7606093556FE8025875C003D1974/$FILE/PPR-2024-03.csv
- * 
- * Note: The middle hash '5C5D7606093556FE8025875C003D1974' is traditionally stable for the "Download" section.
+ * The Property Price Register (PPR) website uses a predictable URL pattern for monthly downloads.
+ * We use this to automatically sync the most recent month's data.
  */
 const PPR_DOWNLOAD_BASE = "https://www.propertypriceregister.ie/website/npsra/pprweb.nsf/0/5C5D7606093556FE8025875C003D1974/$FILE";
 
@@ -210,7 +213,7 @@ export async function runPprImport(csvPath: string, sinceYear?: number) {
   logInfo("Opening CSV file", { path: absolutePath, cwd: process.cwd() });
   const stream = createReadStream(absolutePath)
     .pipe(parse({ columns: true, bom: true, skip_empty_lines: true }));
-  
+
   return runPprImportBatch(stream, csvPath, sinceYear);
 }
 
@@ -244,7 +247,7 @@ async function runPprImportBatch(stream: any, sourceName: string, sinceYear?: nu
     where: { id: run.id },
     data: { status: "SUCCESS", rowsRead, rowsUpserted, finishedAt: new Date() }
   });
-  
+
   logInfo("PPR Import Complete", { rowsRead, rowsUpserted });
 }
 
