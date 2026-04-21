@@ -9,6 +9,7 @@ import {
   getCsoMarketIndex
 } from "@/lib/queries";
 import { MarketTrendChart } from "@/components/market-trend-chart";
+import { unstable_noStore as noStore } from 'next/cache';
 
 export const dynamic = "force-dynamic";
 
@@ -28,10 +29,8 @@ type PageProps = {
 };
 
 export default async function Home({ searchParams }: PageProps) {
-  // Skip execution during build phase to prevent database connectivity crashes
-  if (process.env.NEXT_PHASE === "phase-production-build") {
-    return null;
-  }
+  // Opt out of static generation gracefully
+  noStore();
 
   const params = await searchParams;
   
