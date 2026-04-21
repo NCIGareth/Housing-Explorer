@@ -13,7 +13,8 @@
     "db:migrate": "node scripts/prisma-with-env.mjs migrate dev",
     "db:seed": "node scripts/prisma-with-env.mjs db execute --file prisma/seed.sql --schema prisma/schema.prisma",
     "ingest": "pnpm --filter @housing/ingestion ingest",
-    "ingest:ppr": "node scripts/run-with-root-env.mjs pnpm --filter @housing/ingestion exec tsx src/ppr-import.ts ../../PPR-ALL.csv",
+    "db:truncate:ppr": "node scripts/prisma-with-env.mjs db execute --stdin --schema prisma/schema.prisma -- \"TRUNCATE TABLE \\\"PropertySale\\\" RESTART IDENTITY CASCADE;\"",
+    "ingest:ppr": "node scripts/run-with-root-env.mjs pnpm --filter @housing/ingestion run ppr:import --",
     "start": "next start"
   },
   "devDependencies": {

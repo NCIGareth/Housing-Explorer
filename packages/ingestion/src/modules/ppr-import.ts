@@ -205,20 +205,28 @@ export async function syncLatestPprMonthly() {
   }
 }
 
-export async function runPprImport(csvPath: string) {
-  const stream = createReadStream(resolve(process.cwd(), csvPath))
+export async function runPprImport(csvPath: string, sinceYear?: number) {
+  const absolutePath = resolve(process.cwd(), csvPath);
+  logInfo("Opening CSV file", { path: absolutePath, cwd: process.cwd() });
+  const stream = createReadStream(absolutePath)
     .pipe(parse({ columns: true, bom: true, skip_empty_lines: true }));
   
-  return runPprImportBatch(stream, csvPath);
+  return runPprImportBatch(stream, csvPath, sinceYear);
 }
 
-async function runPprImportBatch(stream: any, sourceName: string) {
+async function runPprImportBatch(stream: any, sourceName: string, sinceYear?: number) {
   const run = await prisma.ingestionRun.create({ data: { source: `PPR-${sourceName}`, status: "RUNNING" } });
   let [rowsRead, rowsUpserted] = [0, 0];
   let promises: Promise<any>[] = [];
 
   for await (const record of stream) {
     rowsRead++;
+
+    if (sinceYear) {
+      const saleDate = parseIrishDate(getSaleDate(record));
+      if (saleDate.getUTCFullYear() < sinceYear) continue;
+    }
+
     promises.push(limit(() => processRow(record)));
 
     if (promises.length >= 500) {
@@ -244,11 +252,16 @@ async function main() {
   const db = await import("@housing/db");
   prisma = db.prisma;
   try {
-    const arg = process.argv[2];
-    if (arg === "--sync") {
+    const args = process.argv.slice(2);
+    const syncMode = args.includes("--sync");
+    const sinceIdx = args.indexOf("--since");
+    const sinceYear = sinceIdx !== -1 ? parseInt(args[sinceIdx + 1], 10) : undefined;
+
+    if (syncMode) {
       await syncLatestPprMonthly();
     } else {
-      await runPprImport(arg || "PPR-ALL.csv");
+      const csvPath = args.find(a => !a.startsWith("-") && a.toLowerCase().endsWith(".csv")) || "../../PPR-ALL.csv";
+      await runPprImport(csvPath, sinceYear);
     }
   } catch (error) {
     console.error("Pipeline Error:", error);
