@@ -2,24 +2,24 @@
 node_modules/
 .pnpm-debug.log*
 
-# Large Data & Storage
-data/
-*.zip
-*.csv
-*.sql
-*.log
-
-# Build & Cache
+# Next.js & Build Caches
 .turbo/
-dist/
 .next/
 out/
 build/
+dist/
 
-# Environment / Secrets
+# Environment Variables
 .env
 .env*.local
 
-# System Files
-Thumbs.db
-.DS_Store
+# Large Data Sets
+PPR-ALL.csv
+
+# AI & IDE Context Mapping
+.clinerules
+.clineignore
+.cursorrules
+.continue/
+memory-bank/
+analysis_results.md

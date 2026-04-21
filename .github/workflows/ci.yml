@@ -17,4 +17,6 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile=false
       - run: pnpm typecheck
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
       - run: pnpm test

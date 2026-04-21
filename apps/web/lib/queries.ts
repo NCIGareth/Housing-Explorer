@@ -9,6 +9,10 @@ async function getDb() {
   return prisma as unknown as PrismaClient;
 }
 
+/** 
+ * Retrieves historical price index metrics for a specific geography.
+ * Used primarily for plotting long-term market trends.
+ */
 export async function getHistoricalSeries(geography: string) {
   if (isBuildPhase()) return [];
   const prisma = await getDb();
@@ -77,6 +81,11 @@ export async function getPprMedianPriceByMonth(county: string) {
   return result as Array<{ period: string; value: number }>;
 }
 
+/**
+ * Advanced query for fetching recent Property Price Register transactions.
+ * Supports filtering by county, eircode substring, price ranges, dates, and market conditions.
+ * Ideal for populating the detailed sales table and map points.
+ */
 export async function getRecentPprSales(params: {
   county: string;
   eircode?: string;
@@ -181,6 +190,10 @@ export async function getLatestSaleDate() {
   return latest?.saleDate;
 }
 
+/** 
+ * Fetches a single property sale record by its unique database ID.
+ * Returns null if the property is not found or during the build phase.
+ */
 export async function getPropertyById(id: string) {
   if (isBuildPhase()) return null;
   const prisma = await getDb();
