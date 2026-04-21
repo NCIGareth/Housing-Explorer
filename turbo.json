@@ -1,6 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalEnv": ["DATABASE_URL", "NEXTAUTH_URL"],
+  "globalEnv": ["DATABASE_URL", "DIRECT_URL", "NEXTAUTH_URL"],
   "tasks": {
     "dev": {
       "cache": false,
