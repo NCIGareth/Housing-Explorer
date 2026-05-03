@@ -5,6 +5,7 @@ type SaleRow = {
   address: string;
   county: string;
   eircode?: string | null;
+  estimatedEircode?: string | null;
   priceEur: number;
   saleDate: Date;
   descriptionOfProperty: string;
@@ -60,7 +61,15 @@ export function PprSalesTable({ sales }: { sales: SaleRow[] }) {
                     <span className="text-[10px] text-slate-400 uppercase">{s.county}</span>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-500">
-                    {s.eircode || "—"}
+                    {s.eircode ? (
+                      s.eircode
+                    ) : s.estimatedEircode ? (
+                      <span className="border-b border-dashed border-slate-300 cursor-help" title="Estimated based on locality">
+                        {s.estimatedEircode}*
+                      </span>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex flex-col items-end">

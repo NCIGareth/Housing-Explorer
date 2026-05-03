@@ -147,7 +147,20 @@ export default async function PprSaleDetailPage({ params }: Props) {
             </div>
             <div className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm">
               <span className="text-slate-400 block uppercase text-[10px] font-bold tracking-widest">Postal Code</span>
-              <span className="font-bold text-slate-900">{sale.eircode || "Not Filed"}</span>
+              <span className="font-bold text-slate-900">
+                {sale.eircode ? (
+                  sale.eircode
+                ) : sale.estimatedEircode ? (
+                  <span className="flex items-center gap-1.5">
+                    {sale.estimatedEircode}
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md">
+                      Estimated
+                    </span>
+                  </span>
+                ) : (
+                  "Not Filed"
+                )}
+              </span>
             </div>
           </div>
 
@@ -166,6 +179,13 @@ export default async function PprSaleDetailPage({ params }: Props) {
           <div className="h-64 rounded-xl overflow-hidden border shadow-sm relative">
             {sale.latitude && sale.longitude ? (
               <ClientMapView pprPreview={[sale]} />
+            ) : sale.estimatedLatitude && sale.estimatedLongitude ? (
+              <div className="relative h-full w-full">
+                <ClientMapView pprPreview={[sale]} />
+                <div className="absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider text-amber-600 border border-amber-200 shadow-sm pointer-events-none">
+                  Estimated Location
+                </div>
+              </div>
             ) : (
               <div className="h-full bg-slate-50 flex flex-col items-center justify-center text-slate-400 p-8 text-center gap-2">
                 <div className="w-8 h-8 rounded-full border-2 border-slate-200 flex items-center justify-center text-lg">?</div>

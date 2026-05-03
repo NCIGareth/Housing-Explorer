@@ -21,33 +21,18 @@ export type PprPoint = {
   priceEur: number;
   latitude: number | null;
   longitude: number | null;
+  estimatedEircode?: string | null;
+  estimatedLatitude?: number | null;
+  estimatedLongitude?: number | null;
 };
-
-/* ================= HELPERS ================= */
-
-const routingKeyCoordinates: Record<
-  string,
-  { latitude: number; longitude: number }
-> = {
-  D01: { latitude: 53.3401, longitude: -6.2604 },
-  D02: { latitude: 53.3203, longitude: -6.2747 },
-  D06: { latitude: 53.2909, longitude: -6.2373 },
-  D14: { latitude: 53.2834, longitude: -6.266 },
-};
-
-function getRoutingKeyCentroid(eircode?: string | null) {
-  if (!eircode) return null;
-  return routingKeyCoordinates[eircode.slice(0, 3).toUpperCase()] || null;
-}
 
 function resolvePointCoords(point: PprPoint) {
   if (point.latitude != null && point.longitude != null) {
     return { lat: point.latitude, lon: point.longitude };
   }
 
-  const centroid = getRoutingKeyCentroid(point.eircode);
-  if (centroid) {
-    return { lat: centroid.latitude, lon: centroid.longitude };
+  if (point.estimatedLatitude != null && point.estimatedLongitude != null) {
+    return { lat: point.estimatedLatitude, lon: point.estimatedLongitude };
   }
 
   return null;

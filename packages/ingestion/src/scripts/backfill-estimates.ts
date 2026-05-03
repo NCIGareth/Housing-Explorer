@@ -61,6 +61,8 @@ async function main() {
           }
         });
         updatedCount++;
+        // Throttle updates to prevent connection pool exhaustion on the live site
+        await new Promise(r => setTimeout(r, 10));
       }
 
       if (processedCount % 1000 === 0) {
