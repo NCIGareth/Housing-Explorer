@@ -110,6 +110,9 @@ model PropertySale {
   propertySizeDescription String?
   latitude                Float?
   longitude               Float?
+  estimatedEircode        String?
+  estimatedLatitude       Float?
+  estimatedLongitude      Float?
   createdAt               DateTime @default(now())
 
   @@index([county, saleDate])

@@ -22,6 +22,7 @@ import { createReadStream } from "node:fs";
 import { parse } from "csv-parse";
 import { propertySaleSchema } from "@housing/shared";
 import { logError, logInfo } from "../lib/logger";
+import { estimateRoutingKey, routingKeyCoordinates } from "../lib/eircode-heuristics";
 import pLimit from "p-limit";
 
 // 1. Concurrency limit: We process up to 50 rows in parallel. 
@@ -76,15 +77,6 @@ function makeSourceKey(row: any): string {
 
 /* ================= GEOCODING ================= */
 
-// Expanded list for better initial coverage
-const routingKeyCoordinates: Record<string, { lat: number; lon: number }> = {
-  D01: { lat: 53.3514, lon: -6.2557 }, D02: { lat: 53.3382, lon: -6.2591 },
-  D06: { lat: 53.3135, lon: -6.2625 }, D14: { lat: 53.2952, lon: -6.2513 },
-  K67: { lat: 53.4597, lon: -6.2181 }, // Swords
-  A94: { lat: 53.2931, lon: -6.1772 }, // Blackrock
-  A96: { lat: 53.2813, lon: -6.1345 }, // Glenageary
-};
-
 async function fetchCoordinates(eircode?: string, address?: string, county?: string) {
   const cacheKey = eircode || `${address}-${county}`;
   if (geoCache.has(cacheKey)) return geoCache.get(cacheKey)!;
@@ -111,13 +103,6 @@ async function fetchCoordinates(eircode?: string, address?: string, county?: str
     logError("geocoding_api_error", { cacheKey });
   }
 
-  if (!result.lat && eircode) {
-    const rKey = eircode.slice(0, 3).toUpperCase();
-    if (routingKeyCoordinates[rKey]) {
-      result = { ...routingKeyCoordinates[rKey], precision: 'ROUTING_KEY' };
-    }
-  }
-
   geoCache.set(cacheKey, result);
   return result;
 }
@@ -135,6 +120,16 @@ async function cleanRow(raw: Record<string, string>) {
   // Call local Nominatim (Docker) to get coordinates
   const coords = await fetchCoordinates(eircode, address, county);
 
+  // Estimation logic
+  let estimatedEircode = eircode ? eircode.slice(0, 3).toUpperCase() : estimateRoutingKey(address, county);
+  let estimatedLatitude = null;
+  let estimatedLongitude = null;
+
+  if (estimatedEircode && routingKeyCoordinates[estimatedEircode]) {
+    estimatedLatitude = routingKeyCoordinates[estimatedEircode].lat;
+    estimatedLongitude = routingKeyCoordinates[estimatedEircode].lon;
+  }
+
   const data = {
     sourceKey: "", // Unique identifier for deduplication
     saleDate,
@@ -146,7 +141,10 @@ async function cleanRow(raw: Record<string, string>) {
     vatExclusive: getCell(raw, "VAT Exclusive").toLowerCase() === "yes",
     descriptionOfProperty: getCell(raw, "Description of Property").trim(),
     latitude: coords.lat,
-    longitude: coords.lon
+    longitude: coords.lon,
+    estimatedEircode,
+    estimatedLatitude,
+    estimatedLongitude
   };
 
   data.sourceKey = makeSourceKey(data);
@@ -161,6 +159,9 @@ async function processRow(record: any) {
       update: {
         latitude: cleaned.latitude ?? undefined,
         longitude: cleaned.longitude ?? undefined,
+        estimatedEircode: cleaned.estimatedEircode ?? undefined,
+        estimatedLatitude: cleaned.estimatedLatitude ?? undefined,
+        estimatedLongitude: cleaned.estimatedLongitude ?? undefined,
       },
       create: cleaned,
     });
