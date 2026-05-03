@@ -58,6 +58,7 @@ export default async function Home({ searchParams }: PageProps) {
       getRecentPprSales({ 
         county, 
         eircode, 
+        locality,
         minPriceEur, 
         maxPriceEur, 
         propertyDescription: propertyType,

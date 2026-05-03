@@ -89,6 +89,7 @@ export async function getPprMedianPriceByMonth(county: string) {
 export async function getRecentPprSales(params: {
   county: string;
   eircode?: string;
+  locality?: string;
   minPriceEur?: number;
   maxPriceEur?: number;
   startDate?: Date;
@@ -103,6 +104,10 @@ export async function getRecentPprSales(params: {
 
   const eircodeFilter = params.eircode
     ? { eircode: { contains: params.eircode, mode: 'insensitive' as const } }
+    : {};
+
+  const localityFilter = params.locality
+    ? { address: { contains: params.locality, mode: 'insensitive' as const } }
     : {};
 
   const propertyDescFilter = params.propertyDescription
@@ -132,6 +137,7 @@ export async function getRecentPprSales(params: {
         lte: params.maxPriceEur
       },
       ...eircodeFilter,
+      ...localityFilter,
       ...propertyDescFilter,
       ...dateFilter,
       ...marketPriceFilter,
