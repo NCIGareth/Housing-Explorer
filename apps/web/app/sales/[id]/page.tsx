@@ -38,7 +38,7 @@ export default async function PprSaleDetailPage({ params }: Props) {
     getRecentPprSales({
       county: sale.county,
       eircode: sale.eircode || undefined,
-      propertyDescription: sale.eircode ? undefined : sale.address, // Fallback if no eircode
+      locality: sale.eircode ? undefined : sale.address, // Fallback to address search if no eircode
       take: 50
     }),
     getLocalCrimeStats(sale.county)

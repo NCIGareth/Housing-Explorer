@@ -129,13 +129,19 @@ export async function getRecentPprSales(params: {
     ? { vatExclusive: params.vatExclusive }
     : {};
 
+  const priceFilter = (params.minPriceEur !== undefined || params.maxPriceEur !== undefined)
+    ? {
+        priceEur: {
+          gte: params.minPriceEur,
+          lte: params.maxPriceEur
+        }
+      }
+    : {};
+
   return prisma.propertySale.findMany({
     where: {
       county: params.county,
-      priceEur: {
-        gte: params.minPriceEur,
-        lte: params.maxPriceEur
-      },
+      ...priceFilter,
       ...eircodeFilter,
       ...localityFilter,
       ...propertyDescFilter,
