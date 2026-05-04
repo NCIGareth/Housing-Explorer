@@ -433,7 +433,12 @@ export async function getSingleEircodeRoutingKeyStats(routingKey: string, county
     FROM current_year curr, previous_year prev
   `;
 
-  const stats = result as any[];
+  const stats = result as Array<{
+    medianPrice: number | null;
+    volume: number | null;
+    growthPercent: number | null;
+  }>;
+
   if (!stats || stats.length === 0) return null;
   
   return {
