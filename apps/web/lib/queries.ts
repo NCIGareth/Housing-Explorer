@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 
 /** Universal check for Next.js build phase */
 const isBuildPhase = () => process.env.NEXT_PHASE === "phase-production-build";
@@ -65,16 +65,70 @@ export async function getLocalCrimeStats(county: string) {
   }));
 }
 
-/** Monthly median sale price (EUR) from the Property Price Register. */
-export async function getPprMedianPriceByMonth(county: string) {
+/** Monthly median sale price (EUR) from the Property Price Register. Supports filtering. */
+export async function getPprMedianPriceByMonth(params: {
+  county: string;
+  eircode?: string;
+  locality?: string;
+  minPriceEur?: number;
+  maxPriceEur?: number;
+  startDate?: Date;
+  endDate?: Date;
+  propertyDescription?: string;
+  notFullMarketPrice?: boolean;
+  vatExclusive?: boolean;
+}) {
   if (isBuildPhase()) return [];
   const prisma = await getDb();
+
+  const whereClauses = [];
+  
+  // Always filter by county
+  whereClauses.push(Prisma.sql`county = ${params.county}`);
+
+  if (params.eircode) {
+    whereClauses.push(Prisma.sql`eircode ILIKE ${'%' + params.eircode + '%'}`);
+  }
+
+  if (params.locality) {
+    whereClauses.push(Prisma.sql`address ILIKE ${'%' + params.locality + '%'}`);
+  }
+
+  if (params.propertyDescription) {
+    whereClauses.push(Prisma.sql`"descriptionOfProperty" ILIKE ${'%' + params.propertyDescription + '%'}`);
+  }
+
+  if (params.startDate) {
+    whereClauses.push(Prisma.sql`"saleDate" >= ${params.startDate}`);
+  }
+
+  if (params.endDate) {
+    whereClauses.push(Prisma.sql`"saleDate" <= ${params.endDate}`);
+  }
+
+  if (params.minPriceEur !== undefined) {
+    whereClauses.push(Prisma.sql`"priceEur" >= ${params.minPriceEur}`);
+  }
+
+  if (params.maxPriceEur !== undefined) {
+    whereClauses.push(Prisma.sql`"priceEur" <= ${params.maxPriceEur}`);
+  }
+
+  if (params.notFullMarketPrice !== undefined) {
+    whereClauses.push(Prisma.sql`"notFullMarketPrice" = ${params.notFullMarketPrice}`);
+  }
+
+  if (params.vatExclusive !== undefined) {
+    whereClauses.push(Prisma.sql`"vatExclusive" = ${params.vatExclusive}`);
+  }
+
+  const where = Prisma.sql`WHERE ${Prisma.join(whereClauses, ' AND ')}`;
 
   const result = await prisma.$queryRaw`
       SELECT to_char(date_trunc('month', "saleDate"), 'YYYY-MM') AS period,
              (percentile_cont(0.5) WITHIN GROUP (ORDER BY "priceEur"::float))::float AS value
       FROM "PropertySale"
-      WHERE county = ${county}
+      ${where}
       GROUP BY date_trunc('month', "saleDate")
       ORDER BY date_trunc('month', "saleDate")
   `;

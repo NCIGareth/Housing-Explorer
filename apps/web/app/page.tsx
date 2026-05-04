@@ -58,7 +58,18 @@ export default async function Home({ searchParams }: PageProps) {
   try {
     const results = await Promise.all([
       getHistoricalSeries(county),
-      getPprMedianPriceByMonth(county),
+      getPprMedianPriceByMonth({ 
+        county, 
+        eircode, 
+        locality,
+        minPriceEur, 
+        maxPriceEur, 
+        propertyDescription: propertyType,
+        startDate,
+        endDate,
+        notFullMarketPrice: notFullMarketPrice ? true : undefined,
+        vatExclusive: vatExclusive ? true : undefined,
+      }),
       getRecentPprSales({ 
         county, 
         eircode, 
