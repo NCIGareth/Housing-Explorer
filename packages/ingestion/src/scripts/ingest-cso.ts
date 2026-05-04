@@ -20,7 +20,7 @@ async function main() {
     logInfo(`Successfully parsed ${metrics.length} relevant metric data points (skipping nulls and percentages).`);
     logInfo("Upserting into database...");
     
-    const result = await upsertCsoMetrics(metrics);
+    const result = await upsertCsoMetrics(prisma, metrics);
     logInfo("CSO Ingestion Complete", result);
 
   } catch (error) {

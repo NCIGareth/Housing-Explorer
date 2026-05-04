@@ -20,7 +20,7 @@ async function main() {
     logInfo(`Successfully parsed ${metrics.length} relevant crime data points across divisions.`);
     logInfo("Upserting into database...");
     
-    const result = await upsertCsoMetrics(metrics);
+    const result = await upsertCsoMetrics(prisma, metrics);
     logInfo("Crime Stats Ingestion Complete", result);
 
   } catch (error) {
