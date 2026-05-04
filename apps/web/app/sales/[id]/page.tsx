@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPropertyById, getLocalCrimeStats, getRecentPprSales } from "@/lib/queries";
+import { getPropertyById, getLocalCrimeStats, getRecentPprSales, getSingleEircodeRoutingKeyStats } from "@/lib/queries";
 import ClientMapView from "@/components/client-map-view";
 import { CrimeStatsGrid } from "@/components/crime-stats-grid";
+import { AreaSnapshot } from "@/components/area-snapshot";
 import { 
   getGoogleFloorplanSearchUrl, 
   getDaftHistorySearchUrl, 
@@ -33,14 +34,17 @@ export default async function PprSaleDetailPage({ params }: Props) {
   // 2. Normalize and fetch related data (History + Live Listing)
   // Our database now uses the standard "XXX XXXX" format with a space.
 
-  const [candidateHistory, crimeStats] = await Promise.all([
+  const routingKey = (sale.eircode || sale.estimatedEircode)?.substring(0, 3);
+
+  const [candidateHistory, crimeStats, areaStats] = await Promise.all([
     getRecentPprSales({
       county: sale.county,
       eircode: sale.eircode || undefined,
       locality: sale.eircode ? undefined : sale.address, // Fallback to address search if no eircode
       take: 50
     }),
-    getLocalCrimeStats(sale.county)
+    getLocalCrimeStats(sale.county),
+    routingKey ? getSingleEircodeRoutingKeyStats(routingKey, sale.county) : null
   ]);
 
   // Clean the history to remove false positives from "Developer Shared Eircodes"
@@ -61,6 +65,13 @@ export default async function PprSaleDetailPage({ params }: Props) {
     }
     return true;
   });
+
+  // Deduplicate history (same date and price)
+  const uniqueHistory = fullHistory.filter((sale, index, self) =>
+    index === self.findIndex((t) => (
+      t.saleDate.getTime() === sale.saleDate.getTime() && t.priceEur === sale.priceEur
+    ))
+  );
 
   const floorplanUrl = getGoogleFloorplanSearchUrl(sale.address);
   const daftHistoryUrl = getDaftHistorySearchUrl(sale.address);
@@ -192,6 +203,15 @@ export default async function PprSaleDetailPage({ params }: Props) {
               </div>
             )}
           </div>
+          
+          {areaStats && (
+            <AreaSnapshot 
+              routingKey={areaStats.routingKey}
+              medianPrice={areaStats.medianPrice}
+              volume={areaStats.volume}
+              growthPercent={areaStats.growthPercent}
+            />
+          )}
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center gap-2">
@@ -229,13 +249,23 @@ export default async function PprSaleDetailPage({ params }: Props) {
           <div className="bg-slate-900 p-5 rounded-2xl shadow-xl space-y-4">
             <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Sales History on Record</h3>
             <ul className="space-y-4">
-              {fullHistory.map((h: typeof fullHistory[0]) => (
-                <li key={h.id} className="flex justify-between items-center group">
+              {uniqueHistory.map((h: typeof uniqueHistory[0]) => (
+                <li key={h.id} className="flex justify-between items-start group">
                   <div className="flex flex-col">
-                    <span className="text-xs font-bold text-white group-hover:text-blue-400 transition-colors">{h.saleDate.getFullYear()}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-white group-hover:text-blue-400 transition-colors">{h.saleDate.getFullYear()}</span>
+                      {h.descriptionOfProperty.toLowerCase().includes('new') && (
+                        <span className="text-[8px] font-black bg-blue-500/20 text-blue-400 px-1 rounded uppercase tracking-tighter border border-blue-500/30">New</span>
+                      )}
+                    </div>
                     <span className="text-[9px] text-slate-500 uppercase">{h.saleDate.toLocaleDateString('en-IE', { month: 'short' })}</span>
                   </div>
-                  <span className="font-black text-slate-200">€{h.priceEur.toLocaleString()}</span>
+                  <div className="flex flex-col items-end">
+                    <span className="font-black text-slate-200">
+                      €{h.priceEur.toLocaleString()}
+                      {h.notFullMarketPrice && <span className="ml-0.5 text-amber-500 text-[10px]">**</span>}
+                    </span>
+                  </div>
                 </li>
               ))}
             </ul>

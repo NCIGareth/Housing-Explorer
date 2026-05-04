@@ -338,3 +338,108 @@ export async function getPropertyById(id: string) {
     where: { id }
   });
 }
+
+/** 
+ * Aggregates property sales by Eircode Routing Key (first 3 chars).
+ * Calculates median price, volume, and 12-month growth.
+ */
+export async function getEircodeRoutingKeyStats(params: {
+  county: string;
+  limit?: number;
+}) {
+  if (isBuildPhase()) return [];
+  const prisma = await getDb();
+
+  // We use both eircode and estimatedEircode to maximize coverage
+  const result = await prisma.$queryRaw`
+    WITH current_year AS (
+      SELECT 
+        SUBSTRING(COALESCE(eircode, "estimatedEircode"), 1, 3) as routing_key,
+        (percentile_cont(0.5) WITHIN GROUP (ORDER BY "priceEur"::float))::float as median_price,
+        COUNT(*)::int as volume
+      FROM "PropertySale"
+      WHERE county = ${params.county}
+        AND "saleDate" >= NOW() - INTERVAL '1 year'
+        AND (eircode IS NOT NULL OR "estimatedEircode" IS NOT NULL)
+      GROUP BY 1
+    ),
+    previous_year AS (
+      SELECT 
+        SUBSTRING(COALESCE(eircode, "estimatedEircode"), 1, 3) as routing_key,
+        (percentile_cont(0.5) WITHIN GROUP (ORDER BY "priceEur"::float))::float as median_price
+      FROM "PropertySale"
+      WHERE county = ${params.county}
+        AND "saleDate" >= NOW() - INTERVAL '2 years'
+        AND "saleDate" < NOW() - INTERVAL '1 year'
+        AND (eircode IS NOT NULL OR "estimatedEircode" IS NOT NULL)
+      GROUP BY 1
+    )
+    SELECT 
+      curr.routing_key as "routingKey",
+      curr.median_price as "medianPrice",
+      curr.volume,
+      CASE 
+        WHEN prev.median_price > 0 THEN ((curr.median_price - prev.median_price) / prev.median_price) * 100
+        ELSE NULL
+      END as "growthPercent"
+    FROM current_year curr
+    LEFT JOIN previous_year prev ON curr.routing_key = prev.routing_key
+    WHERE curr.routing_key IS NOT NULL AND curr.routing_key != ''
+    ORDER BY curr.volume DESC
+    LIMIT ${params.limit ?? 20}
+  `;
+
+  return result as Array<{
+    routingKey: string;
+    medianPrice: number;
+    volume: number;
+    growthPercent: number | null;
+  }>;
+}
+
+/** 
+ * Fetches analytics for a single Eircode Routing Key.
+ */
+export async function getSingleEircodeRoutingKeyStats(routingKey: string, county: string) {
+  if (isBuildPhase()) return null;
+  const prisma = await getDb();
+
+  const result = await prisma.$queryRaw`
+    WITH current_year AS (
+      SELECT 
+        (percentile_cont(0.5) WITHIN GROUP (ORDER BY "priceEur"::float))::float as median_price,
+        COUNT(*)::int as volume
+      FROM "PropertySale"
+      WHERE county = ${county}
+        AND SUBSTRING(COALESCE(eircode, "estimatedEircode"), 1, 3) = ${routingKey}
+        AND "saleDate" >= NOW() - INTERVAL '1 year'
+    ),
+    previous_year AS (
+      SELECT 
+        (percentile_cont(0.5) WITHIN GROUP (ORDER BY "priceEur"::float))::float as median_price
+      FROM "PropertySale"
+      WHERE county = ${county}
+        AND SUBSTRING(COALESCE(eircode, "estimatedEircode"), 1, 3) = ${routingKey}
+        AND "saleDate" >= NOW() - INTERVAL '2 years'
+        AND "saleDate" < NOW() - INTERVAL '1 year'
+    )
+    SELECT 
+      curr.median_price as "medianPrice",
+      curr.volume,
+      CASE 
+        WHEN prev.median_price > 0 THEN ((curr.median_price - prev.median_price) / prev.median_price) * 100
+        ELSE NULL
+      END as "growthPercent"
+    FROM current_year curr, previous_year prev
+  `;
+
+  const stats = result as any[];
+  if (!stats || stats.length === 0) return null;
+  
+  return {
+    routingKey,
+    medianPrice: stats[0].medianPrice || 0,
+    volume: stats[0].volume || 0,
+    growthPercent: stats[0].growthPercent
+  };
+}
