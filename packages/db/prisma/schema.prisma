@@ -113,10 +113,18 @@ model PropertySale {
   estimatedEircode        String?
   estimatedLatitude       Float?
   estimatedLongitude      Float?
+  geom                    Unsupported("geometry(Point, 4326)")?
   createdAt               DateTime @default(now())
 
   @@index([county, saleDate])
   @@index([saleDate, priceEur])
+}
+
+model VerifiedEircodeMap {
+  eircode String @id
+  geom    Unsupported("geometry(Point, 4326)")
+
+  @@index([geom], map: "verified_eircode_geom_idx", type: Gist)
 }
 
 

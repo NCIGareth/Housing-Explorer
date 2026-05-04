@@ -1,13 +1,19 @@
-import { prisma } from '@housing/db';
 import * as dotenv from 'dotenv';
 import { resolve } from 'path';
 import { logInfo, logError } from '../lib/logger';
 
+// Load environment from root or current directory
+dotenv.config({ path: resolve(process.cwd(), '../../.env') });
 dotenv.config({ path: resolve(process.cwd(), '.env') });
 
 async function recoverCoordinates() {
+    // Dynamically import prisma to ensure env is loaded first
+    const { prisma } = await import('@housing/db');
     try {
         console.log("Starting Coordinate Recovery process...");
+
+        // 0. Self-healing: Ensure table exists
+        await prisma.$executeRaw`CREATE TABLE IF NOT EXISTS "internal_geo_reference" (routing_key TEXT PRIMARY KEY, avg_lat FLOAT NOT NULL, avg_lon FLOAT NOT NULL)`;
 
         // 1. Exact Address Matching Pass
         console.log("Pass 1: Exact Address Mirroring...");
@@ -16,8 +22,7 @@ async function recoverCoordinates() {
                 SELECT DISTINCT ON (p1.id)
                     p1.id,
                     p2.latitude,
-                    p2.longitude,
-                    p2.geom
+                    p2.longitude
                 FROM "PropertySale" p1
                 JOIN "PropertySale" p2 ON (p1.address = p2.address AND p1.county = p2.county)
                 WHERE p1.latitude IS NULL 
@@ -26,8 +31,7 @@ async function recoverCoordinates() {
             UPDATE "PropertySale" s
             SET 
                 latitude = matches.latitude,
-                longitude = matches.longitude,
-                geom = matches.geom
+                longitude = matches.longitude
             FROM matches
             WHERE s.id = matches.id;
         `;
@@ -41,8 +45,7 @@ async function recoverCoordinates() {
                 SELECT DISTINCT ON (p1.id)
                     p1.id,
                     p2.latitude,
-                    p2.longitude,
-                    p2.geom
+                    p2.longitude
                 FROM "PropertySale" p1
                 JOIN "PropertySale" p2 ON (p1.eircode = p2.eircode)
                 WHERE p1.latitude IS NULL 
@@ -52,8 +55,7 @@ async function recoverCoordinates() {
             UPDATE "PropertySale" s
             SET 
                 latitude = matches.latitude,
-                longitude = matches.longitude,
-                geom = matches.geom
+                longitude = matches.longitude
             FROM matches
             WHERE s.id = matches.id;
         `;
@@ -76,8 +78,7 @@ async function recoverCoordinates() {
             UPDATE "PropertySale" s
             SET 
                 latitude = matches.avg_lat,
-                longitude = matches.avg_lon,
-                geom = ST_SetSRID(ST_Point(matches.avg_lon, matches.avg_lat), 4326)
+                longitude = matches.avg_lon
             FROM matches
             WHERE s.id = matches.id;
         `;

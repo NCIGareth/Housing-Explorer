@@ -69,7 +69,7 @@ async function runAllIngestion() {
     throw new Error(`Ingestion already running for sources: ${sources}`);
   }
 
-  await runIngestion("CSO", async () => upsertCsoMetrics(await fetchCsoMetrics()));
+  await runIngestion("CSO", async () => upsertCsoMetrics(prisma, await fetchCsoMetrics()));
 }
 
 // 5. The "Brain" - Controls the sequence

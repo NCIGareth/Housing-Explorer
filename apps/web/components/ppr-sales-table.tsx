@@ -15,7 +15,7 @@ type SaleRow = {
 
 // ... thStyle and tdStyle remain the same ...
 
-export function PprSalesTable({ sales }: { sales: SaleRow[] }) {
+export function PprSalesTable({ sales, currentPage = 1, searchParams = {} }: { sales: SaleRow[], currentPage?: number, searchParams?: any }) {
   return (
     <section className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm">
       <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
@@ -95,6 +95,31 @@ export function PprSalesTable({ sales }: { sales: SaleRow[] }) {
             )}
           </tbody>
         </table>
+      </div>
+      
+      {/* Pagination Footer */}
+      <div className="p-3 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center">
+        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          Page {currentPage}
+        </div>
+        <div className="flex gap-2">
+          {currentPage > 1 && (
+            <Link 
+              href={{ query: { ...searchParams, page: currentPage - 1 } }}
+              className="px-3 py-1 text-[10px] font-bold text-slate-600 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors uppercase tracking-widest"
+            >
+              Previous
+            </Link>
+          )}
+          {sales.length === 100 && (
+            <Link 
+              href={{ query: { ...searchParams, page: currentPage + 1 } }}
+              className="px-3 py-1 text-[10px] font-bold text-slate-600 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors uppercase tracking-widest"
+            >
+              Next
+            </Link>
+          )}
+        </div>
       </div>
     </section>
   );

@@ -25,6 +25,7 @@ type PageProps = {
     locality?: string;
     notFullMarketPrice?: string;
     vatExclusive?: string;
+    page?: string;
   }>;
 };
 
@@ -44,6 +45,9 @@ export default async function Home({ searchParams }: PageProps) {
   const locality = params.locality;
   const notFullMarketPrice = params.notFullMarketPrice === "on";
   const vatExclusive = params.vatExclusive === "on";
+  const page = params.page ? Math.max(1, Number(params.page)) : 1;
+  const pageSize = 100;
+  const skip = (page - 1) * pageSize;
 
   // Parallel Data Fetching with graceful error handling for build-time/unreachable DB
   let historical: Awaited<ReturnType<typeof getHistoricalSeries>> = [];
@@ -66,7 +70,8 @@ export default async function Home({ searchParams }: PageProps) {
         endDate,
         notFullMarketPrice: notFullMarketPrice ? true : undefined,
         vatExclusive: vatExclusive ? true : undefined,
-        take: 100 
+        take: pageSize,
+        skip: skip
       }),
       getCsoMarketIndex("National - all residential properties")
     ]);
@@ -140,7 +145,7 @@ export default async function Home({ searchParams }: PageProps) {
             Recent PPR Transactions
           </h2>
           <div className="max-h-[600px] overflow-y-auto border rounded-xl bg-white shadow-sm">
-            <PprSalesTable sales={pprSales} />
+            <PprSalesTable sales={pprSales} currentPage={page} searchParams={params} />
           </div>
         </section>
       </div>

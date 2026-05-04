@@ -98,6 +98,7 @@ export async function getRecentPprSales(params: {
   notFullMarketPrice?: boolean;
   vatExclusive?: boolean;
   take?: number;
+  skip?: number;
 }) {
   if (isBuildPhase()) return [];
   const prisma = await getDb();
@@ -150,7 +151,8 @@ export async function getRecentPprSales(params: {
       ...vatFilter
     },
     orderBy: { saleDate: "desc" },
-    take: params.take ?? 100
+    take: params.take ?? 100,
+    skip: params.skip ?? 0
   });
 }
 

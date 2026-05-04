@@ -7,6 +7,8 @@
   "scripts": {
     "ingest": "tsx src/runner.ts",
     "ppr:import": "tsx src/modules/ppr-import.ts",
+    "ppr:enrich:eircodes": "tsx src/jobs/populate-eircodes.ts",
+    "ppr:enrich:coords": "tsx src/jobs/recover-coordinates.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

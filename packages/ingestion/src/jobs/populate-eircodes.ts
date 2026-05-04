@@ -1,17 +1,25 @@
-import { prisma } from '@housing/db';
 import * as dotenv from 'dotenv';
 import { resolve } from 'path';
 import { logInfo, logError } from '../lib/logger';
 
+// Load environment from root or current directory
+dotenv.config({ path: resolve(process.cwd(), '../../.env') });
 dotenv.config({ path: resolve(process.cwd(), '.env') });
 
 async function populateEircodes() {
+    // Dynamically import prisma to ensure env is loaded first
+    const { prisma } = await import('@housing/db');
     try {
         console.log("Starting Eircode population via spatial matching...");
 
+        // 0. Self-healing: Ensure PostGIS and tables exist
+        await prisma.$executeRaw`CREATE EXTENSION IF NOT EXISTS postgis`;
+        await prisma.$executeRaw`CREATE TABLE IF NOT EXISTS "VerifiedEircodeMap" (eircode TEXT PRIMARY KEY, geom geometry(Point, 4326) NOT NULL)`;
+        await prisma.$executeRaw`CREATE INDEX IF NOT EXISTS "verified_eircode_geom_idx" ON "VerifiedEircodeMap" USING GIST (geom)`;
+
         // 1. Identify rows to fix
         const totalToFixRes = await prisma.$queryRaw<any[]>`
-            SELECT COUNT(*) FROM "PropertySale" WHERE geom IS NOT NULL AND eircode IS NULL
+            SELECT COUNT(*) FROM "PropertySale" WHERE latitude IS NOT NULL AND eircode IS NULL
         `;
         const totalToFix = Number(totalToFixRes[0].count);
         console.log(`Identified ${totalToFix} candidate records with coordinates but no Eircode.`);
@@ -33,17 +41,16 @@ async function populateEircodes() {
             WITH matches AS (
                 SELECT 
                     p.id,
-                    m.eircode as inferred_eircode,
-                    ST_Distance(p.geom::geography, m.geom::geography) as distance
+                    m.eircode as inferred_eircode
                 FROM "PropertySale" p
                 CROSS JOIN LATERAL (
                     SELECT eircode, geom
                     FROM "VerifiedEircodeMap"
-                    ORDER BY p.geom <-> geom
+                    ORDER BY ST_SetSRID(ST_Point(p.longitude, p.latitude), 4326) <-> geom
                     LIMIT 1
                 ) m
-                WHERE p.eircode IS NULL AND p.geom IS NOT NULL
-                AND ST_DWithin(p.geom::geography, m.geom::geography, 15)
+                WHERE p.eircode IS NULL AND p.latitude IS NOT NULL
+                AND ST_DWithin(ST_SetSRID(ST_Point(p.longitude, p.latitude), 4326)::geography, m.geom::geography, 15)
             )
             UPDATE "PropertySale" s
             SET eircode = matches.inferred_eircode

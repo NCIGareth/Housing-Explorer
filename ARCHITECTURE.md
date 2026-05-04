@@ -4,18 +4,24 @@ This repository operates as a `pnpm` monorepo driven by `turbo`, specifically se
 
 ## 1. Monorepo Map
 
-- **`packages/db`**: The ultimate source of truth for the database. Contains the `schema.prisma`. **Rule**: ALL other packages import the `PrismaClient` directly from `@housing/db`. Never initialize a separate Prisma client in web or ingestion folders.
-- **`packages/shared`**: Holds framework-agnostic TypeScript definitions and Zod schemas. Used to pass data safely between the backend APIs, ingestion scripts, and frontend.
+- **`packages/db`**: The ultimate source of truth for the database. Contains the `schema.prisma`. **Rule**: ALL other packages import the `PrismaClient` directly from `@housing/db`.
+- **`packages/shared`**: Holds framework-agnostic TypeScript definitions and Zod schemas.
 - **`packages/ingestion`**: Node.js/TypeScript background jobs. Parses property feeds and CSVs.
-  - *Dependency*: Relies on a local Docker `Nominatim` container running on port `8080` for Eircode-to-GPS geocoding without hitting external API rate limits.
+  - *Self-Healing Layer*: Scripts automatically provision PostGIS extensions and reference tables (`VerifiedEircodeMap`, `internal_geo_reference`) if they are missing.
 - **`apps/web`**: Next.js 15 App Router interface.
-  - *Data Access*: Uses React Server Components heavily. Data queries are isolated in `apps/web/lib/queries.ts` and MUST NOT bleed into `page.tsx` rendering functions.
-  - *Styling*: Tailwind CSS v4.
+  - *Data Access*: Uses React Server Components heavily. Data queries are isolated in `apps/web/lib/queries.ts`.
+  - *Pagination*: Implemented via URL query parameters (`page`) with server-side `skip`/`take` logic.
 
-## 2. Hard Boundaries for Agents
-1. **Never install ORM / DB dependencies inside `apps/web`.** Always update `packages/db` and reference it via standard monorepo workspace imports.
-2. **Never place long-running, blocking loops in the Web API routes.** If a background job takes >5 seconds, it belongs in `packages/ingestion` and should be triggered externally.
-3. **Always use server actions or `@/lib/queries.ts`** when a user interface component needs to read from the Postgres database. 
+## 2. Data Integrity & Normalization
+The ingestion pipeline enforces strict data cleaning:
+- **Normalization**: Abbreviations (Rd, Sq, Ave) are expanded to full words.
+- **Proper Case**: All-caps addresses are converted to CamelCase for readability.
+- **Spatial Fallbacks**: Heuristic estimation (based on Routing Keys) is used when exact geocoding is unavailable.
 
-## 3. Local Hardware Integrations
-- Both NextAuth and database connectivity derive fundamentally from `.env` in the absolute root folder. Wait for Prisma generation using `prisma-with-env.mjs` wrapper in CI/CD chains.
+## 3. Connectivity Strategy
+- **Direct Mode**: For large-scale ingestion (750k+ rows), we bypass the Supabase Pooler (Port 6543) and connect directly to **Port 5432**. This eliminates pooler timeouts and schema visibility lag.
+
+## 4. Hard Boundaries for Agents
+1. **Never install ORM / DB dependencies inside `apps/web`.** Always update `packages/db`.
+2. **Always use server actions or `@/lib/queries.ts`** when a user interface component needs to read from the Postgres database. 
+3. **Keep code edits focused** into single files to stay within the 16k token context window.

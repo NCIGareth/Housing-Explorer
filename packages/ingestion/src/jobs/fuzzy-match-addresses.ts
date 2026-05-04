@@ -1,11 +1,14 @@
-import { prisma } from '@housing/db';
 import * as dotenv from 'dotenv';
 import { resolve } from 'path';
 import { logInfo, logError } from '../lib/logger';
 
+// Load environment from root or current directory
+dotenv.config({ path: resolve(process.cwd(), '../../.env') });
 dotenv.config({ path: resolve(process.cwd(), '.env') });
 
 async function fuzzyMatchAddresses() {
+    // Dynamically import prisma to ensure env is loaded first
+    const { prisma } = await import('@housing/db');
     try {
         console.log("Starting 'House Number Anchored' fuzzy matching...");
 

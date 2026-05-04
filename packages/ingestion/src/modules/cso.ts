@@ -1,4 +1,3 @@
-import { prisma } from "@housing/db";
 import { validateHistoricalMetrics } from "../lib/quality";
 
 type CsoMetric = {
@@ -103,7 +102,7 @@ export async function fetchCsoCrimeMetrics(): Promise<CsoMetric[]> {
   return validateHistoricalMetrics(metrics);
 }
 
-export async function upsertCsoMetrics(rows: CsoMetric[]) {
+export async function upsertCsoMetrics(prisma: any, rows: CsoMetric[]) {
   // Use Promise.all with chunks for mass insertion
   const CHUNK_SIZE = 500;
   let rowsUpserted = 0;
