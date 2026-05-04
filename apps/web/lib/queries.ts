@@ -210,6 +210,75 @@ export async function getRecentPprSales(params: {
   });
 }
 
+/**
+ * Counts the total number of Property Price Register transactions matching the filters.
+ * Used for pagination calculations.
+ */
+export async function getPprSalesCount(params: {
+  county: string;
+  eircode?: string;
+  locality?: string;
+  minPriceEur?: number;
+  maxPriceEur?: number;
+  startDate?: Date;
+  endDate?: Date;
+  propertyDescription?: string;
+  notFullMarketPrice?: boolean;
+  vatExclusive?: boolean;
+}) {
+  if (isBuildPhase()) return 0;
+  const prisma = await getDb();
+
+  const eircodeFilter = params.eircode
+    ? { eircode: { contains: params.eircode, mode: 'insensitive' as const } }
+    : {};
+
+  const localityFilter = params.locality
+    ? { address: { contains: params.locality, mode: 'insensitive' as const } }
+    : {};
+
+  const propertyDescFilter = params.propertyDescription
+    ? { descriptionOfProperty: { contains: params.propertyDescription, mode: 'insensitive' as const } }
+    : {};
+
+  const dateFilter = params.startDate || params.endDate ? {
+    saleDate: {
+      ...(params.startDate ? { gte: params.startDate } : {}),
+      ...(params.endDate ? { lte: params.endDate } : {})
+    }
+  } : {};
+
+  const marketPriceFilter = params.notFullMarketPrice !== undefined
+    ? { notFullMarketPrice: params.notFullMarketPrice }
+    : {};
+
+  const vatFilter = params.vatExclusive !== undefined
+    ? { vatExclusive: params.vatExclusive }
+    : {};
+
+  const priceFilter = (params.minPriceEur !== undefined || params.maxPriceEur !== undefined)
+    ? {
+        priceEur: {
+          gte: params.minPriceEur,
+          lte: params.maxPriceEur
+        }
+      }
+    : {};
+
+  return prisma.propertySale.count({
+    where: {
+      county: params.county,
+      ...priceFilter,
+      ...eircodeFilter,
+      ...localityFilter,
+      ...propertyDescFilter,
+      ...dateFilter,
+      ...marketPriceFilter,
+      ...vatFilter
+    }
+  });
+}
+
 /** Get all counties with sales data */
 export async function getCounties() {
   if (isBuildPhase()) return [];

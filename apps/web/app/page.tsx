@@ -6,7 +6,8 @@ import {
   getHistoricalSeries,
   getPprMedianPriceByMonth,
   getRecentPprSales,
-  getCsoMarketIndex
+  getCsoMarketIndex,
+  getPprSalesCount
 } from "@/lib/queries";
 import { MarketTrendChart } from "@/components/market-trend-chart";
 import { unstable_noStore as noStore } from 'next/cache';
@@ -54,6 +55,7 @@ export default async function Home({ searchParams }: PageProps) {
   let pprSeries: Awaited<ReturnType<typeof getPprMedianPriceByMonth>> = [];
   let pprSales: Awaited<ReturnType<typeof getRecentPprSales>> = [];
   let csoNational: Awaited<ReturnType<typeof getCsoMarketIndex>> = [];
+  let pprTotalCount = 0;
 
   try {
     const results = await Promise.all([
@@ -84,9 +86,21 @@ export default async function Home({ searchParams }: PageProps) {
         take: pageSize,
         skip: skip
       }),
-      getCsoMarketIndex("National - all residential properties")
+      getCsoMarketIndex("National - all residential properties"),
+      getPprSalesCount({
+        county,
+        eircode,
+        locality,
+        minPriceEur,
+        maxPriceEur,
+        propertyDescription: propertyType,
+        startDate,
+        endDate,
+        notFullMarketPrice: notFullMarketPrice ? true : undefined,
+        vatExclusive: vatExclusive ? true : undefined,
+      })
     ]);
-    [historical, pprSeries, pprSales, csoNational] = results;
+    [historical, pprSeries, pprSales, csoNational, pprTotalCount] = results;
   } catch (error) {
     console.warn("Failed to fetch market data during build/render:", error);
   }
@@ -155,8 +169,14 @@ export default async function Home({ searchParams }: PageProps) {
             <span className="w-2 h-2 bg-red-500 rounded-full" /> 
             Recent PPR Transactions
           </h2>
-          <div className="max-h-[600px] overflow-y-auto border rounded-xl bg-white shadow-sm">
-            <PprSalesTable sales={pprSales} currentPage={page} searchParams={params} />
+          <div className="border rounded-xl bg-white shadow-sm">
+            <PprSalesTable 
+              sales={pprSales} 
+              currentPage={page} 
+              pageSize={pageSize}
+              totalCount={pprTotalCount}
+              searchParams={params} 
+            />
           </div>
         </section>
       </div>
