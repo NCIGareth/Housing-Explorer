@@ -26,7 +26,7 @@ export function PprSalesTable({
   currentPage?: number, 
   pageSize?: number,
   totalCount?: number,
-  searchParams?: any 
+  searchParams?: Record<string, string | string[] | undefined> 
 }) {
   const totalPages = Math.ceil(totalCount / pageSize);
   const hasNextPage = currentPage < totalPages;

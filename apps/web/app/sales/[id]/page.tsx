@@ -32,7 +32,6 @@ export default async function PprSaleDetailPage({ params }: Props) {
 
   // 2. Normalize and fetch related data (History + Live Listing)
   // Our database now uses the standard "XXX XXXX" format with a space.
-  const normalizedEircode = sale.eircode;
 
   const [candidateHistory, crimeStats] = await Promise.all([
     getRecentPprSales({
@@ -49,7 +48,7 @@ export default async function PprSaleDetailPage({ params }: Props) {
   const addressNumberMatch = sale.address.match(/(?:\b|^)(\d+)(?:\b|[A-Za-z])/);
   const houseNumber = addressNumberMatch ? addressNumberMatch[1] : null;
 
-  const fullHistory = candidateHistory.filter((h: typeof candidateHistory[0]) => {
+  const fullHistory = candidateHistory.filter((h) => {
     if (h.id === sale.id) return true;
     
     // If both have numbers at the start of their text, they must match
