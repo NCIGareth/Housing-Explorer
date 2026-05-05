@@ -15,6 +15,7 @@
     "@housing/shared": "workspace:*",
     "@prisma/client": "^5.22.0",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "dotenv": "^16.4.7",
     "next": "^15.0.0",
     "next-auth": "^4.24.7",
