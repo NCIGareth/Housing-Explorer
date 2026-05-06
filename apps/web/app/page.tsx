@@ -2,13 +2,11 @@ import { Suspense } from "react";
 import { FilterPanel } from "@/components/filter-panel";
 import {
   DashboardChartsSection,
-  DashboardMapSection,
+  DashboardMapAndTableSection,
   DashboardTrendSection,
-  DashboardTableSection,
   DashboardChartsSkeleton,
-  DashboardMapSkeleton,
+  DashboardMapAndTableSkeleton,
   DashboardTrendSkeleton,
-  DashboardTableSkeleton,
 } from "./dashboard-sections";
 
 export const revalidate = 3600;
@@ -85,24 +83,18 @@ export default async function Home({ searchParams }: PageProps) {
           vatExclusive={vatExclusive}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <Suspense fallback={<DashboardChartsSkeleton />}>
-              <DashboardChartsSection params={filterParams} />
-            </Suspense>
-          </div>
+        <Suspense fallback={<DashboardChartsSkeleton />}>
+          <DashboardChartsSection params={filterParams} />
+        </Suspense>
 
-          <Suspense fallback={<DashboardMapSkeleton />}>
-            <DashboardMapSection params={filterParams} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Suspense fallback={<DashboardMapAndTableSkeleton />}>
+            <DashboardMapAndTableSection params={filterParams} searchParams={params as Record<string, string>} />
           </Suspense>
         </div>
 
         <Suspense fallback={<DashboardTrendSkeleton />}>
-          <DashboardTrendSection params={filterParams} />
-        </Suspense>
-
-        <Suspense fallback={<DashboardTableSkeleton />}>
-          <DashboardTableSection params={filterParams} searchParams={params as Record<string, string>} />
+          <DashboardTrendSection />
         </Suspense>
       </div>
     </main>
