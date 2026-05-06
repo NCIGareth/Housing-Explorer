@@ -27,15 +27,32 @@ The easiest way to populate the database is using the provided PowerShell runner
 
 ## Tech Stack
 
-- **Frontend**: Next.js 15 (App Router), Tailwind CSS v4, Recharts.
+- **Frontend**: Next.js 15 (App Router), Tailwind CSS v4, Recharts, OpenLayers.
 - **Data Layer**: Prisma ORM with **PostGIS** spatial extensions.
+- **Testing**: Jest (web), Vitest (packages). 143 total tests.
 - **Ingestion**: Node.js/TSX workers with `p-limit` concurrency management.
 - **Geocoding**: Local Nominatim (Docker) integration for high-volume processing.
 
 ## Architecture
 
-- **Direct Connection Strategy**: All ingestion scripts connect to Supabase via port `5432` to ensure zero-latency schema visibility.
-- **Monorepo**: Powered by `pnpm` and `turbo` for clean boundary management between `@housing/db`, `@housing/ingestion`, and `apps/web`.
+- **Streaming Rendering**: Pages use React Suspense boundaries for progressive content delivery. ISR caching at 1-hour intervals.
+- **Database Indexing**: PropertySale indexed on `county`, `saleDate`, `eircode`, `address`, and `descriptionOfProperty`.
+- **Monorepo**: Powered by `pnpm` and `turbo` for clean boundary management between `@housing/db`, `@housing/ingestion`, `@housing/shared`, and `apps/web`.
+
+## Testing
+
+```bash
+# Run all tests across the monorepo
+pnpm test
+
+# Run web tests only
+pnpm --filter @housing/web test
+
+# Run package tests only
+pnpm --filter @housing/shared test
+pnpm --filter @housing/ingestion test
+pnpm --filter @housing/db test
+```
 
 ## Development
 
@@ -46,4 +63,3 @@ The easiest way to populate the database is using the provided PowerShell runner
 5. **Start Dev**: `pnpm dev`
 
 ---
-*Built with Antigravity by Google DeepMind.*

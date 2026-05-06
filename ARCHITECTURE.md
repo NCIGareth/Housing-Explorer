@@ -10,7 +10,9 @@ This repository operates as a `pnpm` monorepo driven by `turbo`, specifically se
   - *Self-Healing Layer*: Scripts automatically provision PostGIS extensions and reference tables (`VerifiedEircodeMap`, `internal_geo_reference`) if they are missing.
 - **`apps/web`**: Next.js 15 App Router interface.
   - *Data Access*: Uses React Server Components heavily. Data queries are isolated in `apps/web/lib/queries.ts`.
-  - *Pagination*: Implemented via URL query parameters (`page`) with server-side `skip`/`take` logic.
+  - *Streaming*: Pages use `Suspense` boundaries with skeleton fallbacks for progressive rendering.
+  - *Caching*: ISR with `revalidate: 3600` (1-hour cache) on all pages.
+  - *Testing*: Jest via `next/jest` configuration. Tests in `apps/web/__tests__/`.
 
 ## 2. Data Integrity & Normalization
 The ingestion pipeline enforces strict data cleaning:
@@ -21,7 +23,14 @@ The ingestion pipeline enforces strict data cleaning:
 ## 3. Connectivity Strategy
 - **Direct Mode**: For large-scale ingestion (750k+ rows), we bypass the Supabase Pooler (Port 6543) and connect directly to **Port 5432**. This eliminates pooler timeouts and schema visibility lag.
 
-## 4. Hard Boundaries for Agents
+## 4. Testing Strategy
+- **`@housing/web`**: Jest with `next/jest` — focuses on business logic, external link generators, and component rendering.
+- **`@housing/shared`**: Vitest — focuses on Zod schema validation edge cases.
+- **`@housing/ingestion`**: Vitest — focuses on data quality, geocoding heuristics, and CSV column detection.
+- **`@housing/db`**: Vitest — Prisma client initialization verification.
+- **Total**: 143 tests across 10 test files.
+
+## 5. Hard Boundaries for Agents
 1. **Never install ORM / DB dependencies inside `apps/web`.** Always update `packages/db`.
 2. **Always use server actions or `@/lib/queries.ts`** when a user interface component needs to read from the Postgres database. 
 3. **Keep code edits focused** into single files to stay within the 16k token context window.
