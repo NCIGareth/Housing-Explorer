@@ -1,77 +1,45 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPropertyById, getLocalCrimeStats, getRecentPprSales, getSingleEircodeRoutingKeyStats } from "@/lib/queries";
-import ClientMapView from "@/components/client-map-view";
-import { CrimeStatsGrid } from "@/components/crime-stats-grid";
-import { AreaSnapshot } from "@/components/area-snapshot";
-import { 
-  getGoogleFloorplanSearchUrl, 
-  getDaftHistorySearchUrl, 
-  getPlanningMapUrl, 
+import { getPropertyById } from "@/lib/queries";
+import {
+  getGoogleFloorplanSearchUrl,
+  getDaftHistorySearchUrl,
+  getPlanningMapUrl,
   getSeaiBerRegisterUrl,
-  getGoogleMapsUrl
+  getGoogleMapsUrl,
 } from "@/lib/external-links";
+import { Suspense } from "react";
+import type { PprPoint } from "@/components/market-map-openlayers";
+import {
+  SaleMapSection,
+  SaleHistorySection,
+  SaleCrimeSection,
+  SaleAreaSection,
+  SaleMapSkeleton,
+  SaleHistorySkeleton,
+  SaleCrimeSkeleton,
+  SaleAreaSkeleton,
+} from "./sale-sections";
 
 export const revalidate = 3600;
 
 type Props = { params: Promise<{ id: string }> };
 
 export default async function PprSaleDetailPage({ params }: Props) {
-  // Skip execution during build phase to prevent database connectivity crashes
   if (process.env.NEXT_PHASE === "phase-production-build") {
     return null;
   }
 
   const { id } = await params;
-  
-  // 1. Fetch the specific sale using the build-safe query
   const sale = await getPropertyById(id);
 
   if (!sale) {
     notFound();
   }
 
-  // 2. Normalize and fetch related data (History + Live Listing)
-  // Our database now uses the standard "XXX XXXX" format with a space.
-
   const routingKey = (sale.eircode || sale.estimatedEircode)?.substring(0, 3);
-
-  const [candidateHistory, crimeStats, areaStats] = await Promise.all([
-    getRecentPprSales({
-      county: sale.county,
-      eircode: sale.eircode || undefined,
-      locality: sale.eircode ? undefined : sale.address, // Fallback to address search if no eircode
-      take: 50
-    }),
-    getLocalCrimeStats(sale.county),
-    routingKey ? getSingleEircodeRoutingKeyStats(routingKey, sale.county) : null
-  ]);
-
-  // Clean the history to remove false positives from "Developer Shared Eircodes"
-  // If the target address has a number (e.g. "11 Longview"), we must enforce that the history also contains that number.
-  const addressNumberMatch = sale.address.match(/(?:\b|^)(\d+)(?:\b|[A-Za-z])/);
-  const houseNumber = addressNumberMatch ? addressNumberMatch[1] : null;
-
-  const fullHistory = candidateHistory.filter((h) => {
-    if (h.id === sale.id) return true;
-    
-    // If both have numbers at the start of their text, they must match
-    if (houseNumber) {
-      const hNumberMatch = h.address.match(/(?:\b|^)(\d+)(?:\b|[A-Za-z])/);
-      const hNumber = hNumberMatch ? hNumberMatch[1] : null;
-      if (hNumber && hNumber !== houseNumber) {
-        return false; // Very likely a different house sharing the Eircode
-      }
-    }
-    return true;
-  });
-
-  // Deduplicate history (same date and price)
-  const uniqueHistory = fullHistory.filter((sale, index, self) =>
-    index === self.findIndex((t) => (
-      t.saleDate.getTime() === sale.saleDate.getTime() && t.priceEur === sale.priceEur
-    ))
-  );
+  const vatInclusivePrice = sale.vatExclusive ? Math.round(sale.priceEur * 1.135) : null;
+  const errorReportEmail = `info@psr.ie?subject=Data Error Report: ${sale.address}&body=I would like to report an error with the following listing on the Residential Property Price Register.%0D%0A%0D%0AAddress: ${sale.address}%0D%0ADate of Sale: ${sale.saleDate.toISOString().slice(0, 10)}%0D%0APrice: €${sale.priceEur.toLocaleString()}%0D%0A%0D%0ADescription of error: `;
 
   const floorplanUrl = getGoogleFloorplanSearchUrl(sale.address);
   const daftHistoryUrl = getDaftHistorySearchUrl(sale.address);
@@ -79,8 +47,18 @@ export default async function PprSaleDetailPage({ params }: Props) {
   const planningUrl = getPlanningMapUrl(sale.address, sale.county);
   const berUrl = getSeaiBerRegisterUrl();
 
-  const vatInclusivePrice = sale.vatExclusive ? Math.round(sale.priceEur * 1.135) : null;
-  const errorReportEmail = `info@psr.ie?subject=Data Error Report: ${sale.address}&body=I would like to report an error with the following listing on the Residential Property Price Register.%0D%0A%0D%0AAddress: ${sale.address}%0D%0ADate of Sale: ${sale.saleDate.toISOString().slice(0, 10)}%0D%0APrice: €${sale.priceEur.toLocaleString()}%0D%0A%0D%0ADescription of error: `;
+  const saleData: PprPoint = {
+    id: sale.id,
+    address: sale.address,
+    county: sale.county,
+    eircode: sale.eircode,
+    priceEur: sale.priceEur,
+    latitude: sale.latitude,
+    longitude: sale.longitude,
+    estimatedEircode: sale.estimatedEircode,
+    estimatedLatitude: sale.estimatedLatitude,
+    estimatedLongitude: sale.estimatedLongitude,
+  };
 
   return (
     <main className="max-w-5xl mx-auto p-6 space-y-8 min-h-screen">
@@ -96,8 +74,6 @@ export default async function PprSaleDetailPage({ params }: Props) {
       </nav>
 
       <div className="flex flex-col md:flex-row gap-8">
-        
-        {/* Left Column: Sale Details */}
         <div className="flex-1 space-y-6">
           <header>
             <div className="flex items-center gap-3">
@@ -149,7 +125,7 @@ export default async function PprSaleDetailPage({ params }: Props) {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm">
               <span className="text-slate-400 block uppercase text-[10px] font-bold tracking-widest">Date of Sale</span>
-              <span className="font-bold text-slate-900">{sale.saleDate.toLocaleDateString('en-IE', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
+              <span className="font-bold text-slate-900">{sale.saleDate.toLocaleDateString("en-IE", { day: "2-digit", month: "long", year: "numeric" })}</span>
             </div>
             <div className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm">
               <span className="text-slate-400 block uppercase text-[10px] font-bold tracking-widest">County</span>
@@ -175,7 +151,7 @@ export default async function PprSaleDetailPage({ params }: Props) {
           </div>
 
           <div className="pt-4">
-            <a 
+            <a
               href={`mailto:${errorReportEmail}`}
               className="inline-flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors"
             >
@@ -184,33 +160,17 @@ export default async function PprSaleDetailPage({ params }: Props) {
           </div>
         </div>
 
-        {/* Right Column: Map & Insights Sidebar */}
         <aside className="w-full md:w-80 space-y-6">
           <div className="h-64 rounded-xl overflow-hidden border shadow-sm relative">
-            {sale.latitude && sale.longitude ? (
-              <ClientMapView pprPreview={[sale]} />
-            ) : sale.estimatedLatitude && sale.estimatedLongitude ? (
-              <div className="relative h-full w-full">
-                <ClientMapView pprPreview={[sale]} />
-                <div className="absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider text-amber-600 border border-amber-200 shadow-sm pointer-events-none">
-                  Estimated Location
-                </div>
-              </div>
-            ) : (
-              <div className="h-full bg-slate-50 flex flex-col items-center justify-center text-slate-400 p-8 text-center gap-2">
-                <div className="w-8 h-8 rounded-full border-2 border-slate-200 flex items-center justify-center text-lg">?</div>
-                <p className="text-[10px] font-bold uppercase tracking-wider">Geocoding Not Available</p>
-              </div>
-            )}
+            <Suspense fallback={<SaleMapSkeleton />}>
+              <SaleMapSection sale={saleData} />
+            </Suspense>
           </div>
-          
-          {areaStats && (
-            <AreaSnapshot 
-              routingKey={areaStats.routingKey}
-              medianPrice={areaStats.medianPrice}
-              volume={areaStats.volume}
-              growthPercent={areaStats.growthPercent}
-            />
+
+          {routingKey && (
+            <Suspense fallback={<SaleAreaSkeleton />}>
+              <SaleAreaSection routingKey={routingKey} county={sale.county} />
+            </Suspense>
           )}
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
@@ -221,7 +181,7 @@ export default async function PprSaleDetailPage({ params }: Props) {
             <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
               Bridge to external records for floor area, room counts, and planning history.
             </p>
-            
+
             <div className="grid grid-cols-1 gap-2 pt-2">
               <a href={mapsUrl} target="_blank" className="flex items-center justify-between px-3 py-2.5 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-xl text-[11px] font-bold transition-all border border-violet-100 group">
                 Google Maps (Street View)
@@ -245,33 +205,17 @@ export default async function PprSaleDetailPage({ params }: Props) {
               </a>
             </div>
           </div>
-          
+
           <div className="bg-slate-900 p-5 rounded-2xl shadow-xl space-y-4">
             <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Sales History on Record</h3>
-            <ul className="space-y-4">
-              {uniqueHistory.map((h: typeof uniqueHistory[0]) => (
-                <li key={h.id} className="flex justify-between items-start group">
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-white group-hover:text-blue-400 transition-colors">{h.saleDate.getFullYear()}</span>
-                      {h.descriptionOfProperty.toLowerCase().includes('new') && (
-                        <span className="text-[8px] font-black bg-blue-500/20 text-blue-400 px-1 rounded uppercase tracking-tighter border border-blue-500/30">New</span>
-                      )}
-                    </div>
-                    <span className="text-[9px] text-slate-500 uppercase">{h.saleDate.toLocaleDateString('en-IE', { month: 'short' })}</span>
-                  </div>
-                  <div className="flex flex-col items-end">
-                    <span className="font-black text-slate-200">
-                      €{h.priceEur.toLocaleString()}
-                      {h.notFullMarketPrice && <span className="ml-0.5 text-amber-500 text-[10px]">**</span>}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <Suspense fallback={<SaleHistorySkeleton />}>
+              <SaleHistorySection sale={saleData} />
+            </Suspense>
           </div>
 
-          <CrimeStatsGrid stats={crimeStats} county={sale.county} />
+          <Suspense fallback={<SaleCrimeSkeleton />}>
+            <SaleCrimeSection county={sale.county} />
+          </Suspense>
         </aside>
       </div>
 
@@ -279,9 +223,9 @@ export default async function PprSaleDetailPage({ params }: Props) {
         <div className="bg-slate-50 rounded-2xl p-6 text-xs text-slate-500 leading-relaxed border border-slate-100">
           <p className="font-bold text-slate-900 mb-2 uppercase tracking-widest text-[10px]">Registry Disclaimer</p>
           <p>
-            The Residential Property Price Register is produced by the PSRA pursuant to section 86 of the Property Services (Regulation) Act 2011. 
-            It is based on details filed for stamp duty purposes. The Authority does not edit this data and is not responsible for errors. 
-            It is important to note that the Register is not intended as a "Property Price Index". 
+            The Residential Property Price Register is produced by the PSRA pursuant to section 86 of the Property Services (Regulation) Act 2011.
+            It is based on details filed for stamp duty purposes. The Authority does not edit this data and is not responsible for errors.
+            It is important to note that the Register is not intended as a "Property Price Index".
             Records may include multi-unit sales or partial price declarations.
           </p>
         </div>
