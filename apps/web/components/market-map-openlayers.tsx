@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Map, View, Overlay } from "ol";
 import TileLayer from "ol/layer/Tile";
 import OSM from "ol/source/OSM";
@@ -44,28 +44,27 @@ function encodeSVG(svg: string) {
     : "";
 }
 
-function createMarkerStyle() {
+const MARKER_STYLE = (() => {
   const svg = `
     <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
       <circle cx="12" cy="12" r="10" fill="#ef4444" stroke="white" stroke-width="2"/>
       <text x="12" y="15" text-anchor="middle" fill="white" font-size="10" font-weight="bold">€</text>
     </svg>
   `;
-
   return new Style({
     image: new Icon({
       src: `data:image/svg+xml;base64,${encodeSVG(svg)}`,
       scale: 0.8,
     }),
   });
-}
+})();
 
 /* ================= COMPONENT ================= */
 
 export const MarketMap: React.FC<{
-  points?: PprPoint[]; // Legacy prop to avoid breaking current usage if not yet updated
+  points?: PprPoint[];
   pprPreview?: PprPoint[];
-}> = ({ pprPreview, points }) => {
+}> = React.memo(({ pprPreview, points }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -74,6 +73,11 @@ export const MarketMap: React.FC<{
 
   const [markerCount, setMarkerCount] = useState(0);
 
+  const dataToUse = useMemo(
+    () => pprPreview || points || [],
+    [pprPreview, points]
+  );
+
   /* ================= MARKERS ================= */
 
   const updateMarkers = useCallback(() => {
@@ -81,7 +85,6 @@ export const MarketMap: React.FC<{
     const map = mapInstance.current;
     if (!map) return;
 
-    const dataToUse = pprPreview || points || [];
     const features = dataToUse
       .map((point) => {
         const coords = resolvePointCoords(point);
@@ -92,7 +95,7 @@ export const MarketMap: React.FC<{
           point,
         });
 
-        feature.setStyle(createMarkerStyle());
+        feature.setStyle(MARKER_STYLE);
         return feature;
       })
       .filter((f): f is Feature<Point> => f !== null);
@@ -111,7 +114,7 @@ export const MarketMap: React.FC<{
         });
       }
     }
-  }, [pprPreview, points]);
+  }, [dataToUse]);
 
   /* ================= MAP INIT (RUN ONCE) ================= */
 
@@ -139,7 +142,6 @@ export const MarketMap: React.FC<{
 
     mapInstance.current = map;
 
-    // Handle clicks for selection
     map.on("click", (event) => {
       const feature = map.forEachFeatureAtPixel(event.pixel, (f) => f as Feature);
 
@@ -151,7 +153,7 @@ export const MarketMap: React.FC<{
       const point = feature.get("point") as PprPoint;
       if (!point || !overlayRef.current) return;
 
-      overlayRef.current.style.display = 'block';
+      overlayRef.current.style.display = "block";
 
       const title = point.address;
       const price = point.priceEur;
@@ -208,9 +210,7 @@ export const MarketMap: React.FC<{
       <div
         ref={mapRef}
         className="w-full h-96 border rounded-lg"
-        style={{   width: "100%",
-    height: "400px",
-    background: "red", }}
+        style={{ width: "100%", height: "400px" }}
       />
 
       <div ref={overlayRef} className="pointer-events-auto" />
@@ -220,6 +220,8 @@ export const MarketMap: React.FC<{
       </div>
     </div>
   );
-};
+});
+
+MarketMap.displayName = "MarketMap";
 
 export default MarketMap;

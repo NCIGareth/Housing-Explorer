@@ -135,6 +135,68 @@ export async function getPprMedianPriceByMonth(params: {
   return result as Array<{ period: string; value: number }>;
 }
 
+type PprFilterParams = {
+  county: string;
+  eircode?: string;
+  locality?: string;
+  minPriceEur?: number;
+  maxPriceEur?: number;
+  startDate?: Date;
+  endDate?: Date;
+  propertyDescription?: string;
+  notFullMarketPrice?: boolean;
+  vatExclusive?: boolean;
+};
+
+function buildPprFilterWhere(params: PprFilterParams) {
+  const eircodeFilter = params.eircode
+    ? { eircode: { contains: params.eircode, mode: "insensitive" as const } }
+    : {};
+
+  const localityFilter = params.locality
+    ? { address: { contains: params.locality, mode: "insensitive" as const } }
+    : {};
+
+  const propertyDescFilter = params.propertyDescription
+    ? { descriptionOfProperty: { contains: params.propertyDescription, mode: "insensitive" as const } }
+    : {};
+
+  const dateFilter = params.startDate || params.endDate ? {
+    saleDate: {
+      ...(params.startDate ? { gte: params.startDate } : {}),
+      ...(params.endDate ? { lte: params.endDate } : {})
+    }
+  } : {};
+
+  const marketPriceFilter = params.notFullMarketPrice !== undefined
+    ? { notFullMarketPrice: params.notFullMarketPrice }
+    : {};
+
+  const vatFilter = params.vatExclusive !== undefined
+    ? { vatExclusive: params.vatExclusive }
+    : {};
+
+  const priceFilter = (params.minPriceEur !== undefined || params.maxPriceEur !== undefined)
+    ? {
+        priceEur: {
+          ...(params.minPriceEur !== undefined ? { gte: params.minPriceEur } : {}),
+          ...(params.maxPriceEur !== undefined ? { lte: params.maxPriceEur } : {}),
+        }
+      }
+    : {};
+
+  return {
+    county: params.county,
+    ...priceFilter,
+    ...eircodeFilter,
+    ...localityFilter,
+    ...propertyDescFilter,
+    ...dateFilter,
+    ...marketPriceFilter,
+    ...vatFilter,
+  };
+}
+
 /**
  * Advanced query for fetching recent Property Price Register transactions.
  * Supports filtering by county, eircode substring, price ranges, dates, and market conditions.
@@ -157,53 +219,8 @@ export async function getRecentPprSales(params: {
   if (isBuildPhase()) return [];
   const prisma = await getDb();
 
-  const eircodeFilter = params.eircode
-    ? { eircode: { contains: params.eircode, mode: 'insensitive' as const } }
-    : {};
-
-  const localityFilter = params.locality
-    ? { address: { contains: params.locality, mode: 'insensitive' as const } }
-    : {};
-
-  const propertyDescFilter = params.propertyDescription
-    ? { descriptionOfProperty: { contains: params.propertyDescription, mode: 'insensitive' as const } }
-    : {};
-
-  const dateFilter = params.startDate || params.endDate ? {
-    saleDate: {
-      ...(params.startDate ? { gte: params.startDate } : {}),
-      ...(params.endDate ? { lte: params.endDate } : {})
-    }
-  } : {};
-
-  const marketPriceFilter = params.notFullMarketPrice !== undefined
-    ? { notFullMarketPrice: params.notFullMarketPrice }
-    : {};
-
-  const vatFilter = params.vatExclusive !== undefined
-    ? { vatExclusive: params.vatExclusive }
-    : {};
-
-  const priceFilter = (params.minPriceEur !== undefined || params.maxPriceEur !== undefined)
-    ? {
-        priceEur: {
-          gte: params.minPriceEur,
-          lte: params.maxPriceEur
-        }
-      }
-    : {};
-
   return prisma.propertySale.findMany({
-    where: {
-      county: params.county,
-      ...priceFilter,
-      ...eircodeFilter,
-      ...localityFilter,
-      ...propertyDescFilter,
-      ...dateFilter,
-      ...marketPriceFilter,
-      ...vatFilter
-    },
+    where: buildPprFilterWhere(params),
     orderBy: { saleDate: "desc" },
     take: params.take ?? 100,
     skip: params.skip ?? 0
@@ -214,68 +231,12 @@ export async function getRecentPprSales(params: {
  * Counts the total number of Property Price Register transactions matching the filters.
  * Used for pagination calculations.
  */
-export async function getPprSalesCount(params: {
-  county: string;
-  eircode?: string;
-  locality?: string;
-  minPriceEur?: number;
-  maxPriceEur?: number;
-  startDate?: Date;
-  endDate?: Date;
-  propertyDescription?: string;
-  notFullMarketPrice?: boolean;
-  vatExclusive?: boolean;
-}) {
+export async function getPprSalesCount(params: PprFilterParams) {
   if (isBuildPhase()) return 0;
   const prisma = await getDb();
 
-  const eircodeFilter = params.eircode
-    ? { eircode: { contains: params.eircode, mode: 'insensitive' as const } }
-    : {};
-
-  const localityFilter = params.locality
-    ? { address: { contains: params.locality, mode: 'insensitive' as const } }
-    : {};
-
-  const propertyDescFilter = params.propertyDescription
-    ? { descriptionOfProperty: { contains: params.propertyDescription, mode: 'insensitive' as const } }
-    : {};
-
-  const dateFilter = params.startDate || params.endDate ? {
-    saleDate: {
-      ...(params.startDate ? { gte: params.startDate } : {}),
-      ...(params.endDate ? { lte: params.endDate } : {})
-    }
-  } : {};
-
-  const marketPriceFilter = params.notFullMarketPrice !== undefined
-    ? { notFullMarketPrice: params.notFullMarketPrice }
-    : {};
-
-  const vatFilter = params.vatExclusive !== undefined
-    ? { vatExclusive: params.vatExclusive }
-    : {};
-
-  const priceFilter = (params.minPriceEur !== undefined || params.maxPriceEur !== undefined)
-    ? {
-        priceEur: {
-          gte: params.minPriceEur,
-          lte: params.maxPriceEur
-        }
-      }
-    : {};
-
   return prisma.propertySale.count({
-    where: {
-      county: params.county,
-      ...priceFilter,
-      ...eircodeFilter,
-      ...localityFilter,
-      ...propertyDescFilter,
-      ...dateFilter,
-      ...marketPriceFilter,
-      ...vatFilter
-    }
+    where: buildPprFilterWhere(params)
   });
 }
 

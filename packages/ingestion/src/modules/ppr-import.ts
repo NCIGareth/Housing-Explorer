@@ -124,7 +124,7 @@ function normalizeAddress(address: string): string {
 
 function makeSourceKey(row: any): string {
   return createHash("sha1")
-    .update(`${row.saleDate.toISOString()}|${row.address}|${row.priceEur}`)
+    .update(`${row.saleDate.toISOString()}|${row.address.toLowerCase()}|${row.priceEur}`)
     .digest("hex");
 }
 
