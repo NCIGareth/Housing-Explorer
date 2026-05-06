@@ -10,9 +10,8 @@ import {
   getPprSalesCount
 } from "@/lib/queries";
 import { MarketTrendChart } from "@/components/market-trend-chart";
-import { unstable_noStore as noStore } from 'next/cache';
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 type PageProps = {
   searchParams: Promise<{
@@ -31,9 +30,6 @@ type PageProps = {
 };
 
 export default async function Home({ searchParams }: PageProps) {
-  // Opt out of static generation gracefully
-  noStore();
-
   const params = await searchParams;
   
   const county = params.county ?? "Dublin";

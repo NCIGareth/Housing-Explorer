@@ -28,6 +28,8 @@ model HistoricalMetric {
   createdAt  DateTime @default(now())
 
   @@index([metric, geography, period])
+  @@index([geography])
+  @@index([metric])
 }
 
 model ListingCurrent {
@@ -118,6 +120,10 @@ model PropertySale {
 
   @@index([county, saleDate])
   @@index([saleDate, priceEur])
+  @@index([eircode])
+  @@index([address])
+  @@index([descriptionOfProperty])
+  @@index([county, eircode])
 }
 
 model VerifiedEircodeMap {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import {
   AreaChart,
   Area,
@@ -12,8 +12,25 @@ import {
   ReferenceLine
 } from "recharts";
 
+type ChartTooltipProps = {
+  active?: boolean;
+  payload?: Array<{ payload: { label: string }; value: number }>;
+};
+
+const ChartTooltip = ({ active, payload }: ChartTooltipProps) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-slate-900 text-white p-3 rounded-lg shadow-xl text-sm border border-slate-700">
+      <div className="text-slate-400 mb-1">{payload[0].payload.label}</div>
+      <div className="font-bold font-outfit text-blue-400">
+        Index: {payload[0].value}
+      </div>
+    </div>
+  );
+};
+
 type DataPoint = {
-  period: string; // Format: "YYYYMxx" (e.g. "2015M01")
+  period: string;
   value: number;
 };
 
@@ -23,12 +40,10 @@ interface MarketTrendChartProps {
   subtitle?: string;
 }
 
-export function MarketTrendChart({ data, title = "Residential Property Price Index", subtitle = "Official CSO Inflation Metric (2015=100)" }: MarketTrendChartProps) {
-  // Format period strings into sortable dates and downsample if needed
+export const MarketTrendChart = React.memo(function MarketTrendChart({ data, title = "Residential Property Price Index", subtitle = "Official CSO Inflation Metric (2015=100)" }: MarketTrendChartProps) {
   const formattedData = useMemo(() => {
     return data
       .map((d: typeof data[0]) => {
-        // CSO format is YYYYMxx e.g. 2015M01
         const year = d.period.substring(0, 4);
         const month = d.period.substring(5, 7);
         const date = new Date(parseInt(year), parseInt(month) - 1, 1);
@@ -42,7 +57,6 @@ export function MarketTrendChart({ data, title = "Residential Property Price Ind
         };
       })
       .sort((a, b) => a.sortVal - b.sortVal);
-    // For large datasets (e.g. monthly since 2005 = ~240 points), standard Recharts handles this well natively.
   }, [data]);
 
   if (!formattedData.length) return null;
@@ -77,21 +91,7 @@ export function MarketTrendChart({ data, title = "Residential Property Price Ind
               tickLine={false}
               tick={{ fontSize: 12, fill: '#94a3b8' }}
             />
-            <Tooltip
-              content={({ active, payload }) => {
-                if (active && payload && payload.length) {
-                  return (
-                    <div className="bg-slate-900 text-white p-3 rounded-lg shadow-xl text-sm border border-slate-700">
-                      <div className="text-slate-400 mb-1">{payload[0].payload.label}</div>
-                      <div className="font-bold font-outfit text-blue-400">
-                        Index: {payload[0].value}
-                      </div>
-                    </div>
-                  );
-                }
-                return null;
-              }}
-            />
+            <Tooltip content={<ChartTooltip />} />
             <ReferenceLine y={100} stroke="#94a3b8" strokeDasharray="3 3" />
             <Area
               type="monotone"
@@ -106,4 +106,4 @@ export function MarketTrendChart({ data, title = "Residential Property Price Ind
       </div>
     </div>
   );
-}
+});

@@ -12,7 +12,7 @@ import {
   getGoogleMapsUrl
 } from "@/lib/external-links";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 type Props = { params: Promise<{ id: string }> };
 
