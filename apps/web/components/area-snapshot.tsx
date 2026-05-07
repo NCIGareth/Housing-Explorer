@@ -5,9 +5,10 @@ interface AreaSnapshotProps {
   medianPrice: number;
   volume: number;
   growthPercent: number | null;
+  county?: string;
 }
 
-export function AreaSnapshot({ routingKey, medianPrice, volume, growthPercent }: AreaSnapshotProps) {
+export function AreaSnapshot({ routingKey, medianPrice, volume, growthPercent, county }: AreaSnapshotProps) {
   const isPositive = growthPercent !== null && growthPercent > 0;
   const isNegative = growthPercent !== null && growthPercent < 0;
 
@@ -60,6 +61,15 @@ export function AreaSnapshot({ routingKey, medianPrice, volume, growthPercent }:
           />
         </div>
       </div>
+
+      {county && (
+        <a
+          href={`/compare?areas=${encodeURIComponent(county)}`}
+          className="block text-center text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wider pt-1 transition-colors"
+        >
+          Compare with other areas →
+        </a>
+      )}
     </div>
   );
 }

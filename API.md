@@ -58,6 +58,40 @@ Provides system health status and basic metrics.
 }
 ```
 
+### Search
+
+#### GET /api/search?q=
+
+Full-text search across Property Price Register records.
+
+**Query Parameters:**
+| Param | Type | Description |
+|-------|------|-------------|
+| `q` | string | Search query (min 2 characters) |
+
+**Example:** `GET /api/search?q=D02`
+
+**Response (200):**
+```json
+[
+  {
+    "id": "cm7f3...",
+    "address": "42 MAIN STREET",
+    "county": "Dublin",
+    "eircode": "D02X285",
+    "priceEur": 450000,
+    "saleDate": "2024-01-15T00:00:00.000Z"
+  }
+]
+```
+
+**Notes:**
+- Searches across `address`, `eircode`, and `estimatedEircode` using case-insensitive ILIKE
+- Results ordered by `saleDate DESC`, limited to 20
+- Returns empty array if query is too short or search fails
+
+---
+
 ### Authentication
 
 #### POST /api/auth/signin

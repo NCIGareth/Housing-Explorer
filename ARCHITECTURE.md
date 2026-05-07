@@ -11,7 +11,7 @@ This repository operates as a `pnpm` monorepo driven by `turbo`, specifically se
 - **`apps/web`**: Next.js 15 App Router interface.
   - *Data Access*: Uses React Server Components heavily. Data queries are isolated in `apps/web/lib/queries.ts`.
   - *Streaming*: Pages use `Suspense` boundaries with skeleton fallbacks for progressive rendering.
-  - *Caching*: ISR with `revalidate: 3600` (1-hour cache) on all pages.
+  - *Caching*: Server-rendered on every request (`force-dynamic`). Home page and sale detail pages avoid stale data issues from build-time caching.
   - *Testing*: Jest via `next/jest` configuration. Tests in `apps/web/__tests__/`.
 
 ## 2. Data Integrity & Normalization

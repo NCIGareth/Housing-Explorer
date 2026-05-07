@@ -108,6 +108,7 @@ export async function SaleAreaSection({ routingKey, county }: { routingKey: stri
       medianPrice={areaStats.medianPrice}
       volume={areaStats.volume}
       growthPercent={areaStats.growthPercent}
+      county={county}
     />
   );
 }

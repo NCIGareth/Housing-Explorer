@@ -11,7 +11,7 @@ function extractBeds(description: string | null | undefined): number | null {
 
 export function PricePerUnitPanel({ points }: { points: PprPoint[] }) {
   const groups = useMemo(() => {
-    const map = new Map<number, { prices: number[] }>();
+    const map: Map<number, { prices: number[] }> = new Map();
     for (const p of points) {
       const beds = extractBeds(p.descriptionOfProperty);
       if (beds === null || beds < 1 || beds > 10) continue;
