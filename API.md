@@ -8,7 +8,16 @@ All API endpoints are relative to the application base URL.
 
 ## Authentication
 
-The API uses NextAuth.js for authentication. Include authentication tokens in requests where required.
+The API uses NextAuth.js with a CredentialsProvider (email + password). Sessions are managed via JWT stored in httpOnly cookies.
+
+### How auth works:
+
+1. **Sign up** at `/auth/signup` (POST to `/api/auth/signup`)
+2. **Sign in** at `/auth/signin` (POSTs to `/api/auth/callback/credentials` via next-auth's `signIn()`)
+3. **Session** is available via `useSession()` (client) or `getServerSession(authOptions)` (server)
+4. **Sign out** via `signOut()` from `next-auth/react`
+
+Protected API routes (e.g. `/api/alerts`, `/api/saved-searches`) use `getServerSession()` to verify authentication. A middleware layer also blocks unauthenticated requests to `/api/alerts/*` at the edge.
 
 ## Endpoints
 
@@ -92,46 +101,78 @@ Full-text search across Property Price Register records.
 
 ---
 
-### Authentication
+### Sign Up
 
-#### POST /api/auth/signin
+#### POST /api/auth/signup
 
-Sign in with email credentials.
+Create a new user account.
 
 **Request Body:**
 ```json
 {
   "email": "user@example.com",
-  "password": "password"
+  "name": "Your Name",
+  "password": "yourpassword"
 }
 ```
 
-**Response (200):**
+**Validation:**
+- `email`: valid email format
+- `name`: 1-100 characters
+- `password`: 8-128 characters
+
+**Response (201):**
 ```json
 {
-  "user": {
-    "id": "user_123",
-    "email": "user@example.com",
-    "name": null
-  },
-  "expires": "2024-01-01T12:00:00.000Z"
+  "success": true
 }
 ```
+
+**Response (409):**
+```json
+{
+  "error": "A user with this email already exists"
+}
+```
+
+**Response (400):**
+```json
+{
+  "error": "Invalid input",
+  "details": {
+    "fieldErrors": { "password": ["String must contain at least 8 character(s)"] },
+    "formErrors": []
+  }
+}
+```
+
+### Sign In
+
+Sign-in is handled by next-auth's built-in CredentialsProvider. The client calls `signIn("credentials", { email, password })` from `next-auth/react`, which POSTs to `/api/auth/callback/credentials`. On success, a JWT session cookie is set and the user is redirected.
+
+**Sign-in page:** `/auth/signin`
+
+### Session
 
 #### GET /api/auth/session
 
-Get current user session information.
+Returns the current session (JWT payload). Used internally by `useSession()` and `getServerSession()`.
 
-**Response (200):**
+**Response (200) when authenticated:**
 ```json
 {
   "user": {
     "id": "user_123",
     "email": "user@example.com",
-    "name": null
+    "name": "Your Name"
   },
   "expires": "2024-01-01T12:00:00.000Z"
 }
+```
+
+**Response (200) when unauthenticated:**
+```json
+{}
 ```
 
 ### Saved Searches
@@ -173,7 +214,6 @@ Create a new saved search.
 **Request Body:**
 ```json
 {
-  "userId": "user_123",
   "name": "My Search",
   "county": "Dublin",
   "minPriceEur": 250000,
@@ -198,6 +238,151 @@ Create a new saved search.
   }
 }
 ```
+
+#### DELETE /api/saved-searches
+
+Delete a saved search (and its associated alerts).
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "id": "search_456"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true
+}
+```
+
+### Favourites
+
+#### GET /api/favourites
+
+Retrieve user's saved/favourite properties.
+
+**Authentication:** Required
+
+**Response (200):**
+```json
+{
+  "items": [
+    {
+      "id": "fav_123",
+      "userId": "user_123",
+      "propertyId": "prop_456",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "property": {
+        "id": "prop_456",
+        "address": "42 MAIN STREET",
+        "county": "Dublin",
+        "priceEur": 450000,
+        "saleDate": "2024-01-15T00:00:00.000Z",
+        "eircode": "D02X285",
+        "descriptionOfProperty": "Second-Hand Dwelling house /Apartment"
+      }
+    }
+  ]
+}
+```
+
+#### POST /api/favourites
+
+Save a property to favourites.
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "propertyId": "prop_456"
+}
+```
+
+**Response (201):**
+```json
+{
+  "item": {
+    "id": "fav_123",
+    "userId": "user_123",
+    "propertyId": "prop_456",
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+#### DELETE /api/favourites
+
+Remove a property from favourites.
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "propertyId": "prop_456"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true
+}
+```
+
+### Profile
+
+#### PATCH /api/auth/profile
+
+Update user name and/or password.
+
+**Authentication:** Required
+
+**Request Body (name only):**
+```json
+{
+  "name": "New Name"
+}
+```
+
+**Request Body (password change):**
+```json
+{
+  "currentPassword": "oldpassword",
+  "newPassword": "newpassword"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true
+}
+```
+
+### Export
+
+#### GET /api/export
+
+Download property sale records as CSV.
+
+**Authentication:** Not required
+
+**Query Parameters:**
+| Param | Type | Description |
+|-------|------|-------------|
+| `county` | string | Filter by county |
+| `minPriceEur` | number | Minimum price |
+| `maxPriceEur` | number | Maximum price |
+| `startDate` | string | Earliest sale date (ISO) |
+| `endDate` | string | Latest sale date (ISO) |
+
+**Response (200):** CSV file download with `Content-Disposition: attachment`
 
 ### Alerts
 
@@ -288,12 +473,32 @@ Send a preview email for an alert (used for testing).
 
 Manually trigger alert dispatch for all active alerts.
 
-**Authentication:** Required
+**Authentication:** Required (admin)
 
 **Response (200):**
 ```json
 {
   "sent": 5
+}
+```
+
+#### DELETE /api/alerts
+
+Delete an alert.
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "id": "alert_123"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true
 }
 ```
 

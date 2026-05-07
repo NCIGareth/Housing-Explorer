@@ -14,8 +14,9 @@ model User {
   name          String?
   password      String
   createdAt     DateTime      @default(now())
-  savedSearches SavedSearch[]
-  alerts        Alert[]
+  savedSearches     SavedSearch[]
+  alerts            Alert[]
+  favouriteProperties FavouriteProperty[]
 }
 
 model HistoricalMetric {
@@ -88,6 +89,17 @@ model Alert {
   savedSearch    SavedSearch? @relation(fields: [savedSearchId], references: [id], onDelete: SetNull)
 }
 
+model FavouriteProperty {
+  id         String   @id @default(cuid())
+  userId     String
+  propertyId String
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property   PropertySale @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId])
+}
+
 model IngestionRun {
   id          String   @id @default(cuid())
   source      String
@@ -118,6 +130,7 @@ model PropertySale {
   estimatedLongitude      Float?
   geom                    Unsupported("geometry(Point, 4326)")?
   createdAt               DateTime @default(now())
+  favouriteProperties     FavouriteProperty[]
 
   @@index([county, saleDate])
   @@index([saleDate, priceEur])

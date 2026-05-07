@@ -98,3 +98,29 @@ export async function PATCH(req: Request) {
 
   return NextResponse.json({ updated });
 }
+
+export async function DELETE(req: Request) {
+  const { getServerSession } = await import("next-auth");
+  const { authOptions } = await import("@/lib/auth");
+  const { prisma } = await import("@/lib/db");
+
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await req.json();
+  if (!id) {
+    return NextResponse.json({ error: "id is required" }, { status: 400 });
+  }
+
+  const alert = await prisma.alert.findFirst({
+    where: { id, user: { email: session.user.email } }
+  });
+  if (!alert) {
+    return NextResponse.json({ error: "Alert not found" }, { status: 404 });
+  }
+
+  await prisma.alert.delete({ where: { id } });
+  return NextResponse.json({ success: true });
+}

@@ -4,11 +4,17 @@ A comprehensive web application for exploring the Irish housing market by compar
 
 ## Features
 
-- **Interactive Market Map**: Explore 750,000+ historical transactions with high-precision PostGIS spatial indexing.
+- **Interactive Market Map**: Explore 750,000+ historical transactions with high-precision PostGIS spatial indexing. Four view modes: Points, Heatmap, Clusters, Areas.
 - **Self-Healing Ingestion**: An automated pipeline that auto-provisions PostGIS, creates required tables, and expands address abbreviations for better geocoding.
 - **Intelligent Estimation**: Uses routing-key heuristics to provide estimated coordinates when exact geocoding is unavailable.
 - **Official Metrics**: Real-time comparison with CSO Residential Property Price Index (RPPI) data.
 - **Premium UI**: Dark-mode optimized, glassmorphic dashboard with real-time market inflation charts.
+- **User Accounts**: Email/password authentication via next-auth v4 with bcryptjs password hashing. Sign up, sign in, profile management.
+- **Alert Management**: Create saved searches with filters (county, price range, beds) and subscribe to alert types (new listing match, price drop). Auth-protected API + management UI.
+- **Saved Properties**: Bookmark individual property sales for later reference. Auth-protected with dedicated page.
+- **Data Export**: Download filtered property sale records as CSV.
+- **Area Comparison**: Select multiple counties to overlay historical RPPI trends on a single chart.
+- **User Accounts**: Email/password authentication via next-auth with bcryptjs password hashing.
 
 ## Quick Start (Ingestion)
 
@@ -29,6 +35,7 @@ The easiest way to populate the database is using the provided PowerShell runner
 
 - **Frontend**: Next.js 15 (App Router), Tailwind CSS v4, Recharts, OpenLayers.
 - **Data Layer**: Prisma ORM with **PostGIS** spatial extensions.
+- **Auth**: next-auth v4 with CredentialsProvider (email/password), bcryptjs, JWT sessions.
 - **Testing**: Jest (web), Vitest (packages). 143 total tests.
 - **Ingestion**: Node.js/TSX workers with `p-limit` concurrency management.
 - **Geocoding**: Local Nominatim (Docker) integration for high-volume processing.

@@ -12,10 +12,6 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  // maximumScale: 1 is great for utility apps, but ensures 
-  // users can't zoom into the map on touch devices. 
-  // Keep it for now since this is a data-entry/explorer style tool.
-  maximumScale: 1,
 };
 
 import Header from "@/components/Header";
@@ -28,6 +24,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en">
       <body className="antialiased bg-[#fefefe] text-slate-900" suppressHydrationWarning>
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded-lg focus:text-sm focus:font-semibold focus:outline-none">
+          Skip to main content
+        </a>
         <AuthProvider>
         <div className="min-h-screen flex flex-col">
           <Header />
@@ -42,7 +41,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
           {/* Error Boundary should wrap the main content area 
               to keep the Nav and Footer interactive if a chart crashes */}
-          <main className="flex-1">
+          <main id="main-content" className="flex-1">
             <ErrorBoundary>
               {children}
             </ErrorBoundary>

@@ -12,7 +12,9 @@ This repository operates as a `pnpm` monorepo driven by `turbo`, specifically se
   - *Data Access*: Uses React Server Components heavily. Data queries are isolated in `apps/web/lib/queries.ts`.
   - *Streaming*: Pages use `Suspense` boundaries with skeleton fallbacks for progressive rendering.
   - *Caching*: Server-rendered on every request (`force-dynamic`). Home page and sale detail pages avoid stale data issues from build-time caching.
-  - *Testing*: Jest via `next/jest` configuration. Tests in `apps/web/__tests__/`.
+  - *Client Pages*: Account pages (`/account/alerts`, `/account/favourites`, `/account/profile`) are client components with `"use client"`.
+  - *Data Export*: CSV download via `/api/export` (up to 10,000 records).
+  - *Testing*: Jest via `next/jest` configuration. Tests in `apps/web/__tests__/` and `apps/web/components/__tests__/`.
 
 ## 2. Data Integrity & Normalization
 The ingestion pipeline enforces strict data cleaning:
@@ -30,7 +32,49 @@ The ingestion pipeline enforces strict data cleaning:
 - **`@housing/db`**: Vitest — Prisma client initialization verification.
 - **Total**: 143 tests across 10 test files.
 
-## 5. Hard Boundaries for Agents
+## 5. Authentication Layer
+
+Auth uses **next-auth v4** with the JWT strategy (no database adapter):
+
+- **CredentialsProvider** (email + password) with bcryptjs (12 salt rounds) for password hashing
+- **Sign-up**: POST `/api/auth/signup` validates with Zod, hashes password, creates user in Prisma
+- **Sign-in**: next-auth's built-in credentials callback at `/api/auth/callback/credentials`
+- **Session**: JWT stored in httpOnly cookie; `getServerSession(authOptions)` for server-side auth, `useSession()` for client-side
+- **Middleware**: Edge middleware at `middleware.ts` protects `/api/alerts/*` routes with JWT token check
+- **UI**: Custom sign-in page at `/auth/signin`, sign-up page at `/auth/signup`
+- **Password minimum**: 8 characters
+- **No email verification**: Omitted due to free-tier constraints (no SMTP)
+- **Demo credentials**: `demo@housing.local` / `demo123` (seeded in DB)
+
+Key files:
+- `apps/web/lib/auth.ts` — NextAuthOptions config (providers, callbacks, pages)
+- `apps/web/middleware.ts` — Edge route protection
+- `apps/web/components/auth-provider.tsx` — SessionProvider wrapper for React tree
+- `apps/web/types/next-auth.d.ts` — TypeScript type augmentations
+- `apps/web/app/api/auth/profile/route.ts` — PATCH endpoint for name/password changes
+
+### Account Pages
+
+| Route | Purpose | Component |
+|-------|---------|-----------|
+| `/account/alerts` | Manage saved searches and alerts | Client component with create/delete |
+| `/account/favourites` | View saved property bookmarks | Client component with remove |
+| `/account/profile` | Update name and password | Client form, PATCH to `/api/auth/profile` |
+
+### Saved Properties (FavouriteProperty)
+
+Model stored in Prisma as a join table between `User` and `PropertySale`:
+- `apps/web/app/api/favourites/route.ts` — GET (list), POST (add), DELETE (remove)
+- `apps/web/components/save-property-button.tsx` — Client component on sale detail page
+- Unique constraint on `(userId, propertyId)` prevents duplicates
+
+### Data Export
+
+- `apps/web/app/api/export/route.ts` — GET endpoint, accepts same filter params as dashboard
+- Returns `text/csv` with `Content-Disposition: attachment`
+- No auth required (public data)
+
+## 6. Hard Boundaries for Agents
 1. **Never install ORM / DB dependencies inside `apps/web`.** Always update `packages/db`.
 2. **Always use server actions or `@/lib/queries.ts`** when a user interface component needs to read from the Postgres database. 
 3. **Keep code edits focused** into single files to stay within the 16k token context window.

@@ -10,6 +10,7 @@ import {
 } from "@/lib/external-links";
 import { Suspense } from "react";
 import type { PprPoint } from "@/components/market-map-openlayers";
+import { SavePropertyButton } from "@/components/save-property-button";
 import {
   SaleMapSection,
   SaleHistorySection,
@@ -94,6 +95,7 @@ export default async function PprSaleDetailPage({ params }: Props) {
               {sale.vatExclusive && (
                 <span className="text-sm font-bold text-blue-600 uppercase">Ex-VAT</span>
               )}
+              <SavePropertyButton propertyId={sale.id} />
             </div>
 
             {vatInclusivePrice && (
