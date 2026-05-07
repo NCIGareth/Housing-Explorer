@@ -1,5 +1,5 @@
-INSERT INTO "User" ("id", "email", "name", "password")
-VALUES ('demo_user', 'demo@housing.local', 'Demo User', '$2b$12$/FnyAfC1FGsxoZok2Wm5WOQ4tPW8.ZijHyXOo3X8q0MgrY7y3ocIS')
+INSERT INTO "User" ("id", "email", "name")
+VALUES ('demo_user', 'demo@housing.local', 'Demo User')
 ON CONFLICT ("email") DO NOTHING;
 
 INSERT INTO "HistoricalMetric" ("id", "source", "metric", "geography", "period", "value", "unit")

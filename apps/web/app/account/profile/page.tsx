@@ -1,12 +1,14 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useUser } from "@/components/auth-provider";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export default function ProfilePage() {
-  const { data: session, status, update } = useSession();
+  const { user, loading: authLoading } = useUser();
   const router = useRouter();
+  const supabase = createClient();
 
   const [name, setName] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
@@ -16,12 +18,12 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (status === "unauthenticated") router.push("/auth/signin");
-  }, [status, router]);
+    if (!authLoading && !user) router.push("/auth/signin");
+  }, [authLoading, user, router]);
 
   useEffect(() => {
-    if (session?.user?.name) setName(session.user.name);
-  }, [session]);
+    if (user?.user_metadata?.name) setName(user.user_metadata.name as string);
+  }, [user]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -29,40 +31,36 @@ export default function ProfilePage() {
     setMessage("");
     setError("");
 
-    const body: Record<string, string> = {};
-    if (name) body.name = name;
+    const updates: Record<string, unknown> = {};
+    if (name) {
+      updates.data = { name };
+    }
+
     if (newPassword) {
-      body.currentPassword = currentPassword;
-      body.newPassword = newPassword;
+      const { error: pwdErr } = await supabase.auth.updateUser({ password: newPassword });
+      if (pwdErr) {
+        setError(pwdErr.message);
+        setSaving(false);
+        return;
+      }
     }
 
-    if (Object.keys(body).length === 0) {
-      setError("Nothing to update");
-      setSaving(false);
-      return;
-    }
-
-    const res = await fetch("/api/auth/profile", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.error || "Failed to update profile");
-      setSaving(false);
-      return;
+    if (name) {
+      const { error: updateErr } = await supabase.auth.updateUser({ data: { name } });
+      if (updateErr) {
+        setError(updateErr.message);
+        setSaving(false);
+        return;
+      }
     }
 
     setMessage("Profile updated successfully");
     setCurrentPassword("");
     setNewPassword("");
     setSaving(false);
-    await update();
   }
 
-  if (status === "loading") {
+  if (authLoading) {
     return <div className="max-w-lg mx-auto px-4 py-12"><p className="text-slate-500">Loading...</p></div>;
   }
 
@@ -73,7 +71,7 @@ export default function ProfilePage() {
 
       <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-xl">
         <p className="text-sm font-medium text-slate-700">Email</p>
-        <p className="text-sm text-slate-500">{session?.user?.email}</p>
+        <p className="text-sm text-slate-500">{user?.email}</p>
       </div>
 
       {message && (
@@ -93,12 +91,8 @@ export default function ProfilePage() {
         <p className="text-sm font-medium text-slate-700">Change password</p>
 
         <div>
-          <label htmlFor="currentPassword" className="block text-sm font-medium text-slate-700 mb-1">Current password</label>
-          <input id="currentPassword" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
-        <div>
           <label htmlFor="newPassword" className="block text-sm font-medium text-slate-700 mb-1">New password</label>
-          <input id="newPassword" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="At least 8 characters" />
+          <input id="newPassword" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="At least 6 characters" />
         </div>
 
         <button type="submit" disabled={saving} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors">

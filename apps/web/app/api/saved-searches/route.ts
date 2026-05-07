@@ -8,63 +8,55 @@ const createSchema = z.object({
   county: z.string().optional(),
   minPriceEur: z.number().int().optional(),
   maxPriceEur: z.number().int().optional(),
-  minBeds: z.number().int().optional()
+  minBeds: z.number().int().optional(),
 });
 
-export async function GET() {
-  const { getServerSession } = await import("next-auth");
-  const { authOptions } = await import("@/lib/auth");
-  const { prisma } = await import("@/lib/db");
+async function getAuthUser() {
+  const { createClient } = await import("@/lib/supabase/server");
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+}
 
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
+export async function GET() {
+  const { prisma } = await import("@/lib/db");
+  const user = await getAuthUser();
+  if (!user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const items = await prisma.savedSearch.findMany({
-    where: { user: { email: session.user.email } },
+    where: { user: { email: user.email } },
     orderBy: { createdAt: "desc" },
-    take: 100
+    take: 100,
   });
   return NextResponse.json({ items });
 }
 
 export async function POST(req: Request) {
-  const { getServerSession } = await import("next-auth");
-  const { authOptions } = await import("@/lib/auth");
   const { prisma } = await import("@/lib/db");
-
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
+  const user = await getAuthUser();
+  if (!user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = createSchema.parse(await req.json());
 
-  // Get user from session
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email }
-  });
-  if (!user) {
+  const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+  if (!dbUser) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
   const item = await prisma.savedSearch.create({
-    data: {
-      userId: user.id,
-      ...body
-    }
+    data: { userId: dbUser.id, ...body },
   });
   return NextResponse.json({ item }, { status: 201 });
 }
 
 export async function DELETE(req: Request) {
-  const { getServerSession } = await import("next-auth");
-  const { authOptions } = await import("@/lib/auth");
   const { prisma } = await import("@/lib/db");
-
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
+  const user = await getAuthUser();
+  if (!user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -74,7 +66,7 @@ export async function DELETE(req: Request) {
   }
 
   const search = await prisma.savedSearch.findFirst({
-    where: { id, user: { email: session.user.email } }
+    where: { id, user: { email: user.email } },
   });
   if (!search) {
     return NextResponse.json({ error: "Saved search not found" }, { status: 404 });

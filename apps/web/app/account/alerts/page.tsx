@@ -1,9 +1,8 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useUser } from "@/components/auth-provider";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 
 type SavedSearch = {
   id: string;
@@ -24,7 +23,7 @@ type AlertItem = {
 };
 
 export default function AlertsPage() {
-  const { data: session, status } = useSession();
+  const { user, loading: authLoading } = useUser();
   const router = useRouter();
   const [searches, setSearches] = useState<SavedSearch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,30 +36,20 @@ export default function AlertsPage() {
   const [formMinBeds, setFormMinBeds] = useState("");
   const [alertType, setAlertType] = useState("NEW_LISTING_MATCH");
   const [creating, setCreating] = useState(false);
-  const [counties, setCounties] = useState<string[]>([]);
 
   useEffect(() => {
-    if (status === "unauthenticated") router.push("/auth/signin");
-  }, [status, router]);
+    if (!authLoading && !user) router.push("/auth/signin");
+  }, [authLoading, user, router]);
 
   useEffect(() => {
-    if (status !== "authenticated") return;
+    if (!user) return;
     fetch("/api/saved-searches").then(r => r.json()).then(d => {
       setSearches(d.items || []);
       setLoading(false);
     });
-    fetch("/api/search?q=a").then(r => r.json()).catch(() => {});
-    fetch("/api/health").then(r => r.json()).then(d => {
-      if (d.database?.activeListings !== undefined) {
-        fetch("/api/search?q=").catch(() => {});
-      }
-    }).catch(() => {});
-  }, [status]);
+  }, [user]);
 
   useEffect(() => {
-    fetch("/api/health").then(r => r.json()).then(h => {
-      if (h.counties) setCounties(h.counties);
-    }).catch(() => {});
     const p = new URLSearchParams(window.location.search);
     if (p.get("new") === "1") setShowForm(true);
   }, []);
@@ -100,14 +89,7 @@ export default function AlertsPage() {
     setSearches(s => s.filter(x => x.id !== id));
   }
 
-  async function toggleAlert(alertId: string, enabled: boolean) {
-    setSearches(s => s.map(sr => ({
-      ...sr,
-      alerts: sr.alerts.map(a => a.id === alertId ? { ...a, enabled: !enabled } : a)
-    })));
-  }
-
-  if (status === "loading" || loading) {
+  if (authLoading || loading) {
     return <div className="max-w-3xl mx-auto px-4 py-12"><p className="text-slate-500">Loading...</p></div>;
   }
 

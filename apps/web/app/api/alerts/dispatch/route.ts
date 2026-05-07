@@ -3,62 +3,64 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 export async function POST() {
-  const { getServerSession } = await import("next-auth");
-  const { authOptions } = await import("@/lib/auth");
+  const { createClient } = await import("@/lib/supabase/server");
   const { prisma } = await import("@/lib/db");
   const { sendAlertEmail } = await import("@/lib/mailer");
 
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // Allow cron-triggered dispatch via x-cron-secret header
+  const headers = new Headers();
+  const cronSecret = process.env.DISPATCH_CRON_SECRET;
+
+  // Check authorization: either a valid user session or valid cron secret
+  if (cronSecret) {
+    const req = await import("next/headers").then(m => m.headers());
+    // check header in the current request context
   }
 
-  const userEmail = session.user.email.toLowerCase();
-  const userRole = (session.user as { role?: string }).role?.toString().toLowerCase();
-  const adminEmails = new Set(
-    (process.env.ADMIN_EMAILS ?? "")
-      .split(",")
-      .map((email) => email.trim().toLowerCase())
-      .filter(Boolean)
-  );
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  const isAdmin = adminEmails.has(userEmail) || userRole === "admin";
+  const adminEmails = (process.env.ADMIN_EMAILS || "").split(",").map(s => s.trim()).filter(Boolean);
+  const isAuthorized = user?.email && adminEmails.includes(user.email);
 
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+  // Check x-cron-secret header for cron-triggered dispatch
+  const { headers: reqHeaders } = await import("next/headers");
+  const h = await reqHeaders();
+  const cronHeader = h.get("x-cron-secret");
+  const isCron = cronSecret && cronHeader === cronSecret;
+
+  if (!isAuthorized && !isCron) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const alerts = await prisma.alert.findMany({
     where: { enabled: true },
     include: { user: true, savedSearch: true },
-    take: 100
   });
 
   let sent = 0;
   const failed: Array<{ alertId: string; reason: string }> = [];
 
   for (const alert of alerts) {
-    try {
-      await sendAlertEmail({
-        to: alert.user.email,
-        subject: "Ireland Housing Explorer Alert",
-        text: `Alert ${alert.type} triggered for search "${alert.savedSearch?.name ?? "N/A"}".`
-      });
+    const to = alert.user.email;
+    const searchName = alert.savedSearch?.name ?? "General";
+    const subject =
+      alert.type === "NEW_LISTING_MATCH"
+        ? `New listing match: ${searchName}`
+        : `Price drop: ${searchName}`;
+    const text = `Hello,\n\nThis is an automated alert from Ireland Housing Explorer.\n\nType: ${alert.type}\nSaved search: ${searchName}\n\nLog in to view details.\n\n— Ireland Housing Explorer`;
 
+    try {
+      await sendAlertEmail({ to, subject, text });
       await prisma.alert.update({
         where: { id: alert.id },
-        data: { lastTriggeredAt: new Date() }
+        data: { lastTriggeredAt: new Date() },
       });
-
-      sent += 1;
-    } catch (error) {
-      console.error(`Failed to dispatch alert ${alert.id}:`, error);
-      failed.push({
-        alertId: alert.id,
-        reason: error instanceof Error ? error.message : "Unknown error"
-      });
+      sent++;
+    } catch (err) {
+      failed.push({ alertId: alert.id, reason: String(err) });
     }
   }
 
-  return NextResponse.json({ sent, failed });
+  return NextResponse.json({ sent, failed: failed.length > 0 ? failed : undefined });
 }

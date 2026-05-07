@@ -1,17 +1,26 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useUser } from "./auth-provider";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export function SavePropertyButton({ propertyId }: { propertyId: string }) {
-  const { data: session } = useSession();
+  const { user } = useUser();
   const router = useRouter();
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (!user) return;
+    fetch("/api/favourites").then(r => r.json()).then(d => {
+      if (d.items?.some((f: { propertyId: string }) => f.propertyId === propertyId)) {
+        setSaved(true);
+      }
+    }).catch(() => {});
+  }, [user, propertyId]);
+
   async function handleClick() {
-    if (!session) {
+    if (!user) {
       router.push("/auth/signin");
       return;
     }
@@ -38,16 +47,6 @@ export function SavePropertyButton({ propertyId }: { propertyId: string }) {
     }
     setLoading(false);
   }
-
-  // Check initial saved state
-  useEffect(() => {
-    if (!session) return;
-    fetch("/api/favourites").then(r => r.json()).then(d => {
-      if (d.items?.some((f: { propertyId: string }) => f.propertyId === propertyId)) {
-        setSaved(true);
-      }
-    }).catch(() => {});
-  }, [session, propertyId]);
 
   return (
     <button

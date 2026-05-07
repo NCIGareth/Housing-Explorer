@@ -3,11 +3,20 @@
 import Link from 'next/link';
 import { SearchBar } from './search-bar';
 import { useState } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { useUser } from './auth-provider';
+import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const { data: session } = useSession();
+  const { user } = useUser();
+  const router = useRouter();
+  const supabase = createClient();
+
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    router.refresh();
+  }
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-white/20 bg-white/70 backdrop-blur-xl transition-all duration-300" aria-label="Main navigation">
@@ -29,7 +38,7 @@ export default function Header() {
             <Link href="/compare" className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900">
               Compare
             </Link>
-            {session?.user && (
+            {user && (
               <>
                 <Link href="/account/alerts" className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900">
                   Alerts
@@ -48,13 +57,13 @@ export default function Header() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            {session?.user ? (
+            {user ? (
               <>
-                <Link href="/account/profile" className="text-xs text-slate-500 truncate max-w-[120px] hover:text-slate-700 transition-colors" aria-label={`Account: ${session.user.email}`}>
-                  {session.user.email}
+                <Link href="/account/profile" className="text-xs text-slate-500 truncate max-w-[120px] hover:text-slate-700 transition-colors" aria-label={`Account: ${user.email}`}>
+                  {user.email}
                 </Link>
                 <button
-                  onClick={() => signOut()}
+                  onClick={handleSignOut}
                   className="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
                   aria-label="Sign out"
                 >
@@ -97,7 +106,7 @@ export default function Header() {
             <Link href="/compare" onClick={() => setMenuOpen(false)} className="text-sm font-medium text-slate-700 hover:text-blue-600 transition-colors" role="menuitem">
               Compare
             </Link>
-            {session?.user && (
+            {user && (
               <>
                 <Link href="/account/alerts" onClick={() => setMenuOpen(false)} className="text-sm font-medium text-slate-700 hover:text-blue-600 transition-colors" role="menuitem">
                   Alerts
@@ -110,8 +119,8 @@ export default function Header() {
                 </Link>
               </>
             )}
-            {session?.user ? (
-              <button onClick={() => { setMenuOpen(false); signOut(); }} className="text-sm font-medium text-rose-600 hover:text-rose-700 transition-colors" role="menuitem">
+            {user ? (
+              <button onClick={() => { setMenuOpen(false); handleSignOut(); }} className="text-sm font-medium text-rose-600 hover:text-rose-700 transition-colors" role="menuitem">
                 Sign out
               </button>
             ) : (
@@ -123,10 +132,8 @@ export default function Header() {
           <div className="relative">
             <SearchBar />
           </div>
-          {session?.user && (
-            <div className="text-xs text-slate-400">
-              {session.user.email}
-            </div>
+          {user && (
+            <div className="text-xs text-slate-400">{user.email}</div>
           )}
           <div className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">
             v2.1.0-stable

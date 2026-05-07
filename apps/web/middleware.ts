@@ -1,18 +1,18 @@
-import { getToken } from "next-auth/jwt";
-import { NextRequest, NextResponse } from "next/server";
+import { updateSession } from "@/lib/supabase/middleware";
+import { NextResponse, type NextRequest } from "next/server";
 
-export async function middleware(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+export async function middleware(request: NextRequest) {
+  const { supabaseResponse, user } = await updateSession(request);
 
-  if (req.nextUrl.pathname.startsWith("/api/alerts")) {
-    if (!token) {
+  if (request.nextUrl.pathname.startsWith("/api/alerts")) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   }
 
-  return NextResponse.next();
+  return supabaseResponse;
 }
 
 export const config = {
-  matcher: "/api/alerts/:path*",
+  matcher: ["/api/alerts/:path*", "/api/favourites/:path*", "/api/saved-searches/:path*"],
 };

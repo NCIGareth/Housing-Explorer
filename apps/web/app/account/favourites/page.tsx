@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useUser } from "@/components/auth-provider";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -20,22 +20,22 @@ type Favourite = {
 };
 
 export default function FavouritesPage() {
-  const { data: session, status } = useSession();
+  const { user, loading: authLoading } = useUser();
   const router = useRouter();
   const [items, setItems] = useState<Favourite[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (status === "unauthenticated") router.push("/auth/signin");
-  }, [status, router]);
+    if (!authLoading && !user) router.push("/auth/signin");
+  }, [authLoading, user, router]);
 
   useEffect(() => {
-    if (status !== "authenticated") return;
+    if (!user) return;
     fetch("/api/favourites").then(r => r.json()).then(d => {
       setItems(d.items || []);
       setLoading(false);
     });
-  }, [status]);
+  }, [user]);
 
   async function removeFav(propertyId: string) {
     await fetch("/api/favourites", {
@@ -45,7 +45,7 @@ export default function FavouritesPage() {
     setItems(s => s.filter(x => x.property.id !== propertyId));
   }
 
-  if (status === "loading" || loading) {
+  if (authLoading || loading) {
     return <div className="max-w-3xl mx-auto px-4 py-12"><p className="text-slate-500">Loading...</p></div>;
   }
 

@@ -34,24 +34,28 @@ The ingestion pipeline enforces strict data cleaning:
 
 ## 5. Authentication Layer
 
-Auth uses **next-auth v4** with the JWT strategy (no database adapter):
+Auth uses **Supabase Auth** (email/password). Supabase manages password hashing, session cookies, and token refresh automatically.
 
-- **CredentialsProvider** (email + password) with bcryptjs (12 salt rounds) for password hashing
-- **Sign-up**: POST `/api/auth/signup` validates with Zod, hashes password, creates user in Prisma
-- **Sign-in**: next-auth's built-in credentials callback at `/api/auth/callback/credentials`
-- **Session**: JWT stored in httpOnly cookie; `getServerSession(authOptions)` for server-side auth, `useSession()` for client-side
-- **Middleware**: Edge middleware at `middleware.ts` protects `/api/alerts/*` routes with JWT token check
-- **UI**: Custom sign-in page at `/auth/signin`, sign-up page at `/auth/signup`
-- **Password minimum**: 8 characters
+- **Sign-up**: Client-side `supabase.auth.signUp({ email, password, options: { data: { name } } })` at `/auth/signup`
+- **Sign-in**: Client-side `supabase.auth.signInWithPassword({ email, password })` at `/auth/signin`
+- **Session**: Managed via `sb-*-auth-token` cookie set by `@supabase/ssr`
+- **Server auth**: `supabase.auth.getUser()` via `@/lib/supabase/server` — used in all API routes via shared `getAuthUser()` helper
+- **Client auth**: Custom React context (`auth-provider.tsx`) with `useUser()` hook, listens to `onAuthStateChange`
+- **Middleware**: Edge middleware at `middleware.ts` protects `/api/alerts/*`, `/api/favourites/*`, `/api/saved-searches/*` using Supabase session
+- **DB sync**: A `handle_new_user()` trigger on `auth.users` auto-creates a `public.User` row on signup
+- **Profile updates**: PATCH `/api/auth/profile` uses Supabase `getUser()` for auth and `supabase.auth.updateUser()` for updates
 - **No email verification**: Omitted due to free-tier constraints (no SMTP)
-- **Demo credentials**: `demo@housing.local` / `demo123` (seeded in DB)
 
 Key files:
-- `apps/web/lib/auth.ts` — NextAuthOptions config (providers, callbacks, pages)
+- `apps/web/lib/supabase/client.ts` — Browser Supabase client
+- `apps/web/lib/supabase/server.ts` — Server Supabase client for API routes
+- `apps/web/lib/supabase/middleware.ts` — Edge middleware Supabase client
 - `apps/web/middleware.ts` — Edge route protection
-- `apps/web/components/auth-provider.tsx` — SessionProvider wrapper for React tree
-- `apps/web/types/next-auth.d.ts` — TypeScript type augmentations
+- `apps/web/components/auth-provider.tsx` — Supabase session context + `useUser()` hook
+- `apps/web/app/auth/signin/page.tsx` — Sign-in form
+- `apps/web/app/auth/signup/page.tsx` — Sign-up form
 - `apps/web/app/api/auth/profile/route.ts` — PATCH endpoint for name/password changes
+- `supabase/auth-sync.sql` — DB trigger and pg_cron setup
 
 ### Account Pages
 

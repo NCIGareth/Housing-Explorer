@@ -1,6 +1,6 @@
 "use client";
 
-import { signIn } from "next-auth/react";
+import { createClient } from "@/lib/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, Suspense } from "react";
 import Link from "next/link";
@@ -8,27 +8,26 @@ import Link from "next/link";
 function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const error = searchParams.get("error");
   const callbackUrl = searchParams.get("callbackUrl") || "/";
 
+  const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setMessage("");
+    setError("");
 
-    const result = await signIn("credentials", {
+    const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
-      redirect: false,
     });
 
-    if (result?.error) {
-      setMessage("Invalid email or password");
+    if (signInError) {
+      setError(signInError.message);
       setLoading(false);
     } else {
       router.push(callbackUrl);
@@ -44,15 +43,9 @@ function SignInForm() {
           Sign in to manage your alerts and saved searches.
         </p>
 
-        {error === "CredentialsSignin" && (
+        {error && (
           <div className="mb-4 rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700">
-            Invalid email or password
-          </div>
-        )}
-
-        {message && (
-          <div className="mb-4 rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700">
-            {message}
+            {error}
           </div>
         )}
 

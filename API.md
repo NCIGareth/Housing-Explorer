@@ -8,16 +8,18 @@ All API endpoints are relative to the application base URL.
 
 ## Authentication
 
-The API uses NextAuth.js with a CredentialsProvider (email + password). Sessions are managed via JWT stored in httpOnly cookies.
+The API uses **Supabase Auth** (email/password). Sessions are managed via Supabase's `sb-*-auth-token` cookie set by `@supabase/ssr`.
 
 ### How auth works:
 
-1. **Sign up** at `/auth/signup` (POST to `/api/auth/signup`)
-2. **Sign in** at `/auth/signin` (POSTs to `/api/auth/callback/credentials` via next-auth's `signIn()`)
-3. **Session** is available via `useSession()` (client) or `getServerSession(authOptions)` (server)
-4. **Sign out** via `signOut()` from `next-auth/react`
+1. **Sign up** via `supabase.auth.signUp()` (client-side form at `/auth/signup`)
+2. **Sign in** via `supabase.auth.signInWithPassword()` (client-side form at `/auth/signin`)
+3. **Session** is available via `useUser()` hook from `auth-provider.tsx` (client) or `supabase.auth.getUser()` server helper (server)
+4. **Sign out** via `supabase.auth.signOut()`
 
-Protected API routes (e.g. `/api/alerts`, `/api/saved-searches`) use `getServerSession()` to verify authentication. A middleware layer also blocks unauthenticated requests to `/api/alerts/*` at the edge.
+Protected API routes (e.g. `/api/alerts`, `/api/saved-searches`) use a shared `getAuthUser()` helper that calls `supabase.auth.getUser()`. A middleware layer also blocks unauthenticated requests to `/api/alerts/*`, `/api/favourites/*`, and `/api/saved-searches/*` at the edge.
+
+A DB trigger (`handle_new_user()`) syncs `auth.users` → `public.User` on signup.
 
 ## Endpoints
 
@@ -101,79 +103,14 @@ Full-text search across Property Price Register records.
 
 ---
 
-### Sign Up
+### Sign Up / Sign In
 
-#### POST /api/auth/signup
+Sign-up and sign-in are handled by client-side forms at `/auth/signup` and `/auth/signin` that call Supabase Auth directly:
 
-Create a new user account.
+- **Sign up**: `supabase.auth.signUp({ email, password, options: { data: { name } } })`
+- **Sign in**: `supabase.auth.signInWithPassword({ email, password })`
 
-**Request Body:**
-```json
-{
-  "email": "user@example.com",
-  "name": "Your Name",
-  "password": "yourpassword"
-}
-```
-
-**Validation:**
-- `email`: valid email format
-- `name`: 1-100 characters
-- `password`: 8-128 characters
-
-**Response (201):**
-```json
-{
-  "success": true
-}
-```
-
-**Response (409):**
-```json
-{
-  "error": "A user with this email already exists"
-}
-```
-
-**Response (400):**
-```json
-{
-  "error": "Invalid input",
-  "details": {
-    "fieldErrors": { "password": ["String must contain at least 8 character(s)"] },
-    "formErrors": []
-  }
-}
-```
-
-### Sign In
-
-Sign-in is handled by next-auth's built-in CredentialsProvider. The client calls `signIn("credentials", { email, password })` from `next-auth/react`, which POSTs to `/api/auth/callback/credentials`. On success, a JWT session cookie is set and the user is redirected.
-
-**Sign-in page:** `/auth/signin`
-
-### Session
-
-#### GET /api/auth/session
-
-Returns the current session (JWT payload). Used internally by `useSession()` and `getServerSession()`.
-
-**Response (200) when authenticated:**
-```json
-{
-  "user": {
-    "id": "user_123",
-    "email": "user@example.com",
-    "name": "Your Name"
-  },
-  "expires": "2024-01-01T12:00:00.000Z"
-}
-```
-
-**Response (200) when unauthenticated:**
-```json
-{}
-```
+No server-side API routes are used for authentication. Supabase manages session cookies automatically via `@supabase/ssr`.
 
 ### Saved Searches
 

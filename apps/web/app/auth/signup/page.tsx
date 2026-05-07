@@ -1,11 +1,13 @@
 "use client";
 
+import { createClient } from "@/lib/supabase/client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function SignUpPage() {
   const router = useRouter();
+  const supabase = createClient();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
@@ -17,20 +19,21 @@ export default function SignUpPage() {
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/auth/signup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, name, password }),
+    const { error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { name },
+      },
     });
 
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.error || "Something went wrong");
+    if (signUpError) {
+      setError(signUpError.message);
       setLoading(false);
       return;
     }
 
-    router.push("/auth/signin?success=Account created. Sign in with your email and password.");
+    router.push("/auth/signin?message=Account created. Check your email if confirmation is required, or sign in now.");
   }
 
   return (
@@ -86,11 +89,11 @@ export default function SignUpPage() {
               id="password"
               type="password"
               required
-              minLength={8}
+              minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="At least 8 characters"
+              placeholder="At least 6 characters"
             />
           </div>
 
