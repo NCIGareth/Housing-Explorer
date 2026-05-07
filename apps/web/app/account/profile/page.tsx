@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useUser } from "@/components/auth-provider";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -11,7 +13,7 @@ export default function ProfilePage() {
   const supabase = createClient();
 
   const [name, setName] = useState("");
-  const [currentPassword, setCurrentPassword] = useState("");
+
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -55,7 +57,6 @@ export default function ProfilePage() {
     }
 
     setMessage("Profile updated successfully");
-    setCurrentPassword("");
     setNewPassword("");
     setSaving(false);
   }

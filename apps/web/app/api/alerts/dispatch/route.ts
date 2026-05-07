@@ -7,15 +7,7 @@ export async function POST() {
   const { prisma } = await import("@/lib/db");
   const { sendAlertEmail } = await import("@/lib/mailer");
 
-  // Allow cron-triggered dispatch via x-cron-secret header
-  const headers = new Headers();
   const cronSecret = process.env.DISPATCH_CRON_SECRET;
-
-  // Check authorization: either a valid user session or valid cron secret
-  if (cronSecret) {
-    const req = await import("next/headers").then(m => m.headers());
-    // check header in the current request context
-  }
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
