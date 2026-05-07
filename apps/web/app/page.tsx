@@ -11,7 +11,7 @@ import {
   DashboardTrendSkeleton,
 } from "./dashboard-sections";
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 type PageProps = {
   searchParams: Promise<{

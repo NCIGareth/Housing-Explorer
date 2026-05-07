@@ -25,7 +25,6 @@ if (!process.env.DATABASE_URL) {
 
 const nextConfig = {
   transpilePackages: ["@housing/db", "@housing/shared"],
-  output: "standalone",
   experimental: {
     optimizePackageImports: ["recharts", "ol"],
   },

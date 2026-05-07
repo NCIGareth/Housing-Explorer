@@ -6,12 +6,15 @@ import TileLayer from "ol/layer/Tile";
 import OSM from "ol/source/OSM";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
+import ClusterSource from "ol/source/Cluster";
+import HeatmapLayer from "ol/layer/Heatmap";
 import { Feature } from "ol";
 import { Point } from "ol/geom";
 import { fromLonLat } from "ol/proj";
-import { Style, Icon } from "ol/style";
+import { Style, Icon, Circle, Fill, Stroke, Text } from "ol/style";
+import { boundingExtent } from "ol/extent";
 
-/* ================= TYPES ================= */
+export type MapViewMode = "points" | "heatmap" | "clusters" | "boundaries";
 
 export type PprPoint = {
   id: string;
@@ -24,6 +27,7 @@ export type PprPoint = {
   estimatedEircode?: string | null;
   estimatedLatitude?: number | null;
   estimatedLongitude?: number | null;
+  descriptionOfProperty?: string | null;
 };
 
 function resolvePointCoords(point: PprPoint) {
@@ -59,17 +63,81 @@ const MARKER_STYLE = (() => {
   });
 })();
 
-/* ================= COMPONENT ================= */
+const PRICE_TIER_COLORS = [
+  { max: 200000, color: "#22c55e", label: "Under €200k" },
+  { max: 350000, color: "#84cc16", label: "€200k-€350k" },
+  { max: 500000, color: "#eab308", label: "€350k-€500k" },
+  { max: 750000, color: "#f97316", label: "€500k-€750k" },
+  { max: Infinity, color: "#ef4444", label: "Over €750k" },
+];
+
+function priceTierColor(price: number): string {
+  for (const tier of PRICE_TIER_COLORS) {
+    if (price <= tier.max) return tier.color;
+  }
+  return "#ef4444";
+}
+
+function createClusterStyle(features: Feature[]) {
+  const size = features.length;
+  return new Style({
+    image: new Circle({
+      radius: Math.min(12 + size * 1.5, 30),
+      fill: new Fill({ color: "rgba(37, 99, 235, 0.7)" }),
+      stroke: new Stroke({ color: "#fff", width: 2 }),
+    }),
+    text: new Text({
+      text: size.toString(),
+      fill: new Fill({ color: "#fff" }),
+      font: "bold 12px sans-serif",
+    }),
+  });
+}
+
+function createDataLayer(source: VectorSource, mode: MapViewMode) {
+  if (mode === "heatmap") {
+    return new HeatmapLayer({
+      source,
+      blur: 15,
+      radius: 10,
+      weight: (feature) => {
+        const point = feature.get("point") as PprPoint | undefined;
+        return point ? Math.min(point.priceEur / 1000000, 1) : 0;
+      },
+    });
+  }
+
+  if (mode === "clusters") {
+    const clusterSource = new ClusterSource({ distance: 40, source });
+    return new VectorLayer({
+      source: clusterSource,
+      style: (feature) => createClusterStyle(feature.get("features")),
+    });
+  }
+
+  if (mode === "boundaries") {
+    return new VectorLayer({
+      source,
+      style: MARKER_STYLE,
+    });
+  }
+
+  return new VectorLayer({ source, style: MARKER_STYLE });
+}
 
 export const MarketMap: React.FC<{
   points?: PprPoint[];
   pprPreview?: PprPoint[];
-}> = React.memo(({ pprPreview, points }) => {
+  viewMode?: MapViewMode;
+}> = React.memo(({ pprPreview, points, viewMode = "points" }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
-
   const mapInstance = useRef<Map | null>(null);
   const vectorSourceRef = useRef(new VectorSource());
+  const boundarySourceRef = useRef(new VectorSource());
+  const dataLayerRef = useRef<VectorLayer | HeatmapLayer | null>(null);
+  const viewModeRef = useRef(viewMode);
+  viewModeRef.current = viewMode;
 
   const [markerCount, setMarkerCount] = useState(0);
 
@@ -78,7 +146,87 @@ export const MarketMap: React.FC<{
     [pprPreview, points]
   );
 
-  /* ================= MARKERS ================= */
+  const rebuildBoundaries = useCallback(() => {
+    const features = vectorSourceRef.current.getFeatures();
+    const groups: Record<string, { prices: number[]; coords: number[][] }> = {};
+
+    for (const f of features) {
+      const point = f.get("point") as PprPoint | undefined;
+      if (!point) continue;
+      const routingKey = (point.eircode || point.estimatedEircode || "").substring(0, 3).toUpperCase();
+      if (!routingKey || routingKey.length < 2) continue;
+      if (!groups[routingKey]) groups[routingKey] = { prices: [], coords: [] };
+      groups[routingKey].prices.push(point.priceEur);
+      const geom = f.getGeometry() as Point | undefined;
+      if (geom) groups[routingKey].coords.push(geom.getCoordinates());
+    }
+
+    const boundaryFeatures: Feature[] = [];
+    for (const key of Object.keys(groups)) {
+      const { prices, coords } = groups[key];
+      if (coords.length < 2) continue;
+      const centroid: number[] = [
+        coords.reduce((s, c) => s + c[0], 0) / coords.length,
+        coords.reduce((s, c) => s + c[1], 0) / coords.length,
+      ];
+      const sorted = [...prices].sort((a, b) => a - b);
+      const medianPrice = sorted[Math.floor(sorted.length / 2)];
+
+      const bf = new Feature({
+        geometry: new Point(centroid),
+        routingKey: key,
+        medianPrice,
+        volume: prices.length,
+      });
+      boundaryFeatures.push(bf);
+    }
+
+    boundarySourceRef.current.clear();
+    boundarySourceRef.current.addFeatures(boundaryFeatures);
+  }, []);
+
+  const swapDataLayer = useCallback((map: Map, source: VectorSource, mode: MapViewMode) => {
+    const oldLayer = dataLayerRef.current;
+    if (oldLayer) map.removeLayer(oldLayer);
+
+    if (mode === "boundaries") {
+      const layer = new VectorLayer({
+        source: boundarySourceRef.current,
+        style: (feature) => {
+          const price = feature.get("medianPrice") as number;
+          const key = feature.get("routingKey") as string;
+          const volume = feature.get("volume") as number;
+          const color = priceTierColor(price);
+          return [
+            new Style({
+              image: new Circle({
+                radius: Math.min(12 + volume * 0.3, 28),
+                fill: new Fill({ color: color + "BB" }),
+                stroke: new Stroke({ color: "#fff", width: 2 }),
+              }),
+            }),
+            new Style({
+              text: new Text({
+                text: `${key}\n€${(price / 1000).toFixed(0)}k`,
+                fill: new Fill({ color: "#0f172a" }),
+                font: "bold 11px sans-serif",
+                stroke: new Stroke({ color: "#fff", width: 3 }),
+                textAlign: "center",
+                offsetY: -15,
+              }),
+            }),
+          ];
+        },
+      });
+      dataLayerRef.current = layer;
+      map.getLayers().insertAt(1, layer);
+      return;
+    }
+
+    const newLayer = createDataLayer(source, mode);
+    dataLayerRef.current = newLayer;
+    map.getLayers().insertAt(1, newLayer);
+  }, []);
 
   const updateMarkers = useCallback(() => {
     const vectorSource = vectorSourceRef.current;
@@ -89,20 +237,18 @@ export const MarketMap: React.FC<{
       .map((point) => {
         const coords = resolvePointCoords(point);
         if (!coords) return null;
-
-        const feature = new Feature({
+        return new Feature({
           geometry: new Point(fromLonLat([coords.lon, coords.lat])),
           point,
         });
-
-        feature.setStyle(MARKER_STYLE);
-        return feature;
       })
       .filter((f): f is Feature<Point> => f !== null);
 
     vectorSource.clear();
     vectorSource.addFeatures(features);
     setMarkerCount(features.length);
+
+    rebuildBoundaries();
 
     if (features.length > 0) {
       const extent = vectorSource.getExtent();
@@ -114,9 +260,9 @@ export const MarketMap: React.FC<{
         });
       }
     }
-  }, [dataToUse]);
+  }, [dataToUse, rebuildBoundaries]);
 
-  /* ================= MAP INIT (RUN ONCE) ================= */
+  /* ================= MAP INIT ================= */
 
   useEffect(() => {
     if (!mapRef.current || !overlayRef.current) return;
@@ -127,12 +273,11 @@ export const MarketMap: React.FC<{
       offset: [0, -10],
     });
 
+    const tileLayer = new TileLayer({ source: new OSM() });
+
     const map = new Map({
       target: mapRef.current,
-      layers: [
-        new TileLayer({ source: new OSM() }),
-        new VectorLayer({ source: vectorSourceRef.current }),
-      ],
+      layers: [tileLayer],
       overlays: [overlay],
       view: new View({
         center: fromLonLat([-6.2603, 53.3498]),
@@ -142,12 +287,59 @@ export const MarketMap: React.FC<{
 
     mapInstance.current = map;
 
+    swapDataLayer(map, vectorSourceRef.current, viewModeRef.current);
+
     map.on("click", (event) => {
       const feature = map.forEachFeatureAtPixel(event.pixel, (f) => f as Feature);
 
       if (!feature) {
         overlay.setPosition(undefined);
         return;
+      }
+
+      if (viewModeRef.current === "clusters") {
+        const clusterFeatures = feature.get("features") as Feature[] | undefined;
+        if (clusterFeatures && clusterFeatures.length > 1) {
+          const coords = clusterFeatures
+            .map((f) => {
+              const geom = f.getGeometry() as Point | undefined;
+              return geom ? geom.getCoordinates() : null;
+            })
+            .filter((c): c is number[] => c !== null);
+          if (coords.length > 0) {
+            const extent = boundingExtent(coords);
+            map.getView().fit(extent, { padding: [50, 50, 50, 50], maxZoom: 16, duration: 400 });
+          }
+          return;
+        }
+      }
+
+      if (viewModeRef.current === "boundaries") {
+        const routingKey = feature.get("routingKey") as string | undefined;
+        if (routingKey) {
+          overlayRef.current!.style.display = "block";
+          const medianPrice = feature.get("medianPrice") as number;
+          const volume = feature.get("volume") as number;
+          overlayRef.current!.innerHTML = `
+            <div class="bg-white p-0 rounded-2xl shadow-2xl border border-slate-200 w-64 overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div class="p-4 space-y-3">
+                <div class="space-y-1">
+                  <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-700">
+                    Area Overview
+                  </span>
+                  <h3 class="font-bold text-slate-900">Eircode Routing Key: ${routingKey}</h3>
+                </div>
+                <div class="flex items-baseline gap-1">
+                  <span class="text-xs font-bold text-slate-400">Median</span>
+                  <span class="text-xl font-black text-slate-900">€${medianPrice.toLocaleString()}</span>
+                </div>
+                <p class="text-xs text-slate-500">Based on ${volume} recorded sales</p>
+              </div>
+            </div>
+          `;
+          overlay.setPosition(event.coordinate);
+          return;
+        }
       }
 
       const point = feature.get("point") as PprPoint;
@@ -169,7 +361,7 @@ export const MarketMap: React.FC<{
               <h3 class="font-bold text-slate-900 leading-tight truncate">${title}</h3>
               <p class="text-xs text-slate-500 font-medium">${point.county}</p>
             </div>
-            
+
             <div class="flex items-baseline gap-1">
               <span class="text-xs font-bold text-slate-400">€</span>
               <span class="text-xl font-black text-slate-900">${price.toLocaleString()}</span>
@@ -199,11 +391,24 @@ export const MarketMap: React.FC<{
     };
   }, []);
 
+  /* ================= SWAP LAYER ON VIEW MODE CHANGE ================= */
+
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!map) return;
+    swapDataLayer(map, vectorSourceRef.current, viewMode);
+  }, [viewMode, swapDataLayer]);
+
   /* ================= UPDATE MARKERS WHEN DATA CHANGES ================= */
 
   useEffect(() => {
     updateMarkers();
   }, [updateMarkers]);
+
+  const countLabel = viewMode === "clusters" ? "Clusters"
+    : viewMode === "heatmap" ? "Heatmap"
+    : viewMode === "boundaries" ? "Areas"
+    : "Markers";
 
   return (
     <div className="relative w-full">
@@ -216,7 +421,7 @@ export const MarketMap: React.FC<{
       <div ref={overlayRef} className="pointer-events-auto" />
 
       <div className="absolute top-2 left-2 bg-white px-3 py-1 rounded shadow text-sm font-medium border">
-        Markers: {markerCount}
+        {countLabel}: {markerCount}
       </div>
     </div>
   );
