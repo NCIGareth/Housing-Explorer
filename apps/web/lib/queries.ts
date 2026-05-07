@@ -401,11 +401,44 @@ export async function getSingleEircodeRoutingKeyStats(routingKey: string, county
   }>;
 
   if (!stats || stats.length === 0) return null;
-  
+
   return {
     routingKey,
     medianPrice: stats[0].medianPrice || 0,
     volume: stats[0].volume || 0,
     growthPercent: stats[0].growthPercent
   };
+}
+
+export type SearchResult = {
+  id: string;
+  address: string;
+  county: string;
+  eircode: string | null;
+  priceEur: number;
+  saleDate: Date;
+};
+
+export async function searchProperties(query: string, limit = 20) {
+  if (isBuildPhase()) return [];
+  const prisma = await getDb();
+
+  const results = await prisma.$queryRaw`
+    SELECT id, address, county, eircode, "priceEur", "saleDate"
+    FROM "PropertySale"
+    WHERE address ILIKE ${'%' + query + '%'}
+       OR eircode ILIKE ${'%' + query + '%'}
+       OR "estimatedEircode" ILIKE ${'%' + query + '%'}
+    ORDER BY "saleDate" DESC
+    LIMIT ${limit}
+  `;
+
+  return results as Array<{
+    id: string;
+    address: string;
+    county: string;
+    eircode: string | null;
+    priceEur: number;
+    saleDate: Date;
+  }>;
 }

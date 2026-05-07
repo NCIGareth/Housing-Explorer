@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SearchBar } from './search-bar';
 
 export default function Header() {
   return (
@@ -22,6 +23,8 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-4">
+          <SearchBar />
+
           <div className="flex items-center text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">
             v2.1.0-stable
           </div>
