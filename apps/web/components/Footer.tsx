@@ -19,9 +19,22 @@ export default function Footer() {
           <div>
             <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900">Data Sources</h3>
             <ul className="mt-6 space-y-4 text-sm text-slate-500">
-              <li>PSRA Transaction Log (PPR)</li>
-              <li>CSO Residential Price Index</li>
-              <li>Ireland Nominatim (Geo)</li>
+              <li>
+                <div className="font-medium text-slate-700">PSRA Transaction Log (PPR)</div>
+                <div className="text-xs text-slate-400 mt-0.5">Updated monthly</div>
+              </li>
+              <li>
+                <div className="font-medium text-slate-700">CSO Residential Price Index</div>
+                <div className="text-xs text-slate-400 mt-0.5">Updated monthly</div>
+              </li>
+              <li>
+                <div className="font-medium text-slate-700">CSO Crime Statistics</div>
+                <div className="text-xs text-slate-400 mt-0.5">Updated quarterly (An Garda Síochána)</div>
+              </li>
+              <li>
+                <div className="font-medium text-slate-700">Ireland Nominatim (Geo)</div>
+                <div className="text-xs text-slate-400 mt-0.5">Static dataset</div>
+              </li>
             </ul>
           </div>
 
