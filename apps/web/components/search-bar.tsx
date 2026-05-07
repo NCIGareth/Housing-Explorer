@@ -119,7 +119,7 @@ export function SearchBar() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="relative hidden md:block">
+    <form onSubmit={handleSubmit} className="relative">
       <input
         ref={inputRef}
         type="text"

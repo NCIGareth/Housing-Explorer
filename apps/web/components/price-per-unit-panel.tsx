@@ -27,7 +27,17 @@ export function PricePerUnitPanel({ points }: { points: PprPoint[] }) {
       }));
   }, [points]);
 
-  if (groups.length === 0) return null;
+  if (groups.length === 0) {
+    if (points.length === 0) return null;
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
+          Avg Price by Bed Count
+        </h4>
+        <p className="text-xs text-slate-400 italic">No bedroom data available for these properties</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">

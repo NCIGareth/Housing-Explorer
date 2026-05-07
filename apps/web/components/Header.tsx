@@ -1,7 +1,12 @@
+"use client";
+
 import Link from 'next/link';
 import { SearchBar } from './search-bar';
+import { useState } from 'react';
 
 export default function Header() {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-white/20 bg-white/70 backdrop-blur-xl transition-all duration-300">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -26,13 +31,48 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-4">
-          <SearchBar />
+          <div className="hidden md:block">
+            <SearchBar />
+          </div>
 
-          <div className="flex items-center text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">
+          <div className="hidden md:flex items-center text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">
+            v2.1.0-stable
+          </div>
+
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="flex md:hidden h-10 w-10 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
+            aria-label="Toggle menu"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              {menuOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {menuOpen && (
+        <div className="md:hidden border-t border-slate-200 bg-white/95 backdrop-blur-xl px-4 py-4 space-y-4 shadow-lg">
+          <div className="flex items-center gap-4">
+            <Link href="/" onClick={() => setMenuOpen(false)} className="text-sm font-medium text-slate-700 hover:text-blue-600 transition-colors">
+              Explorer
+            </Link>
+            <Link href="/compare" onClick={() => setMenuOpen(false)} className="text-sm font-medium text-slate-700 hover:text-blue-600 transition-colors">
+              Compare
+            </Link>
+          </div>
+          <div className="relative">
+            <SearchBar />
+          </div>
+          <div className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">
             v2.1.0-stable
           </div>
         </div>
-      </div>
+      )}
     </nav>
   );
 }

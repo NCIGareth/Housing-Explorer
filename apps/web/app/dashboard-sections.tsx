@@ -145,7 +145,13 @@ export async function DashboardTrendSection() {
     console.warn("Failed to fetch trend data:", error);
   }
 
-  if (!csoNational.length) return null;
+  if (!csoNational.length) {
+    return (
+      <section className="mt-8">
+        <MarketTrendChart data={[]} title="National Property Price Inflation" subtitle="CSO RPPI Base Index (100 = 2015)" />
+      </section>
+    );
+  }
 
   return (
     <section className="mt-8">

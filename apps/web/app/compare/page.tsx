@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { getCounties, getMultiHistoricalSeries } from "@/lib/queries";
 import { CompareForm } from "./compare-form";
 import { CompareChart } from "@/components/compare-chart";
@@ -6,19 +7,26 @@ type PageProps = {
   searchParams: Promise<{ areas?: string }>;
 };
 
+async function CompareChartSection({ areas }: { areas: string }) {
+  const selectedAreas = areas.split(",").filter(Boolean);
+  if (selectedAreas.length < 2) return null;
+
+  const result = await getMultiHistoricalSeries(selectedAreas);
+  return <CompareChart data={result.merged} areas={result.areas} />;
+}
+
+function ChartSkeleton() {
+  return (
+    <div className="h-[460px] bg-slate-50 rounded-xl border border-slate-200 animate-pulse flex items-center justify-center">
+      <div className="text-slate-400 text-sm italic">Loading comparison data...</div>
+    </div>
+  );
+}
+
 export default async function ComparePage({ searchParams }: PageProps) {
   const { areas } = await searchParams;
   const selectedAreas = areas ? areas.split(",").filter(Boolean) : [];
   const allCounties = await getCounties();
-
-  let chartData: Array<Record<string, string | number>> = [];
-  let chartAreas: string[] = [];
-
-  if (selectedAreas.length >= 2) {
-    const result = await getMultiHistoricalSeries(selectedAreas);
-    chartData = result.merged;
-    chartAreas = result.areas;
-  }
 
   return (
     <main className="max-w-5xl mx-auto p-4 md:p-8 space-y-8">
@@ -36,7 +44,9 @@ export default async function ComparePage({ searchParams }: PageProps) {
       )}
 
       {selectedAreas.length >= 2 && (
-        <CompareChart data={chartData} areas={chartAreas} />
+        <Suspense fallback={<ChartSkeleton />}>
+          <CompareChartSection areas={areas!} />
+        </Suspense>
       )}
     </main>
   );

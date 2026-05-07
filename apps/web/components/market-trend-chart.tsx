@@ -59,7 +59,19 @@ export const MarketTrendChart = React.memo(function MarketTrendChart({ data, tit
       .sort((a, b) => a.sortVal - b.sortVal);
   }, [data]);
 
-  if (!formattedData.length) return null;
+  if (!formattedData.length) {
+    return (
+      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="mb-6">
+          <h3 className="font-outfit font-bold text-slate-800 text-lg">{title}</h3>
+          <p className="text-sm text-slate-500">{subtitle}</p>
+        </div>
+        <div className="h-[300px] flex items-center justify-center bg-slate-50 rounded-lg border border-dashed text-slate-400 italic text-sm">
+          No trend data available yet
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">

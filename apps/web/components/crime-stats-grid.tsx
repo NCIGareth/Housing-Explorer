@@ -12,14 +12,24 @@ interface CrimeStatsGridProps {
 
 export function CrimeStatsGrid({ stats, county }: CrimeStatsGridProps) {
   if (!stats || stats.length === 0) {
-    return null;
+    return (
+      <div className="bg-slate-900 p-5 rounded-2xl shadow-xl space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Local Area Safety</h3>
+          <span className="text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
+            Official CSO
+          </span>
+        </div>
+        <p className="text-xs text-slate-400 italic">No crime data available for {county}</p>
+      </div>
+    );
   }
 
   // Remove the long repetitive prefix from the CSO crime categories to make them UI-friendly.
   const cleanCategoryName = (name: string) => {
     return name
       .replace(/offences\s*\(.*?\)/i, "")
-      .replace(/offences\s+/i, "")
+      .replace(/offences\s*/i, "")
       .trim();
   };
 
