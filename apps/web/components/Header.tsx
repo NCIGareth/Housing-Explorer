@@ -19,6 +19,9 @@ export default function Header() {
             <Link href="/" className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900">
               Explorer
             </Link>
+            <Link href="/compare" className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900">
+              Compare
+            </Link>
           </div>
         </div>
 

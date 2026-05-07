@@ -410,6 +410,36 @@ export async function getSingleEircodeRoutingKeyStats(routingKey: string, county
   };
 }
 
+export async function getMultiHistoricalSeries(areas: string[]) {
+  if (isBuildPhase()) return { merged: [], areas: [] };
+  if (areas.length === 0) return { merged: [], areas: [] };
+  const prisma = await getDb();
+
+  const results = await Promise.all(
+    areas.map((area) =>
+      prisma.historicalMetric.findMany({
+        where: { geography: area, metric: "residential_price_index" },
+        orderBy: { period: "asc" },
+      })
+    )
+  );
+
+  const periodMap: Record<string, Record<string, number>> = {};
+  for (let i = 0; i < areas.length; i++) {
+    const key = areas[i].replace(/\s+/g, "_");
+    for (const row of results[i]) {
+      if (!periodMap[row.period]) periodMap[row.period] = {};
+      periodMap[row.period][key] = Number(row.value);
+    }
+  }
+
+  const merged = Object.entries(periodMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([period, values]) => ({ period, ...values }));
+
+  return { merged, areas };
+}
+
 export type SearchResult = {
   id: string;
   address: string;
