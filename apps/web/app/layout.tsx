@@ -20,6 +20,7 @@ export const viewport: Viewport = {
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import AuthProvider from "@/components/auth-provider";
 import { Suspense } from "react";
 import RecentSaleStatus from "@/components/RecentSaleStatus";
 
@@ -27,6 +28,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en">
       <body className="antialiased bg-[#fefefe] text-slate-900" suppressHydrationWarning>
+        <AuthProvider>
         <div className="min-h-screen flex flex-col">
           <Header />
           <div className="bg-slate-50 border-b border-slate-100 py-1.5 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500">
@@ -48,6 +50,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
           <Footer />
         </div>
+        </AuthProvider>
         <Analytics />
         <SpeedInsights />
       </body>

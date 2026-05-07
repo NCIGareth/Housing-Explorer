@@ -3,9 +3,11 @@
 import Link from 'next/link';
 import { SearchBar } from './search-bar';
 import { useState } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { data: session } = useSession();
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-white/20 bg-white/70 backdrop-blur-xl transition-all duration-300">
@@ -35,8 +37,27 @@ export default function Header() {
             <SearchBar />
           </div>
 
-          <div className="hidden md:flex items-center text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">
-            v2.1.0-stable
+          <div className="hidden md:flex items-center gap-3">
+            {session?.user ? (
+              <>
+                <span className="text-xs text-slate-500 truncate max-w-[120px]">
+                  {session.user.email}
+                </span>
+                <button
+                  onClick={() => signOut()}
+                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/auth/signin"
+                className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
+              >
+                Sign in
+              </Link>
+            )}
           </div>
 
           <button
@@ -57,17 +78,34 @@ export default function Header() {
 
       {menuOpen && (
         <div className="md:hidden border-t border-slate-200 bg-white/95 backdrop-blur-xl px-4 py-4 space-y-4 shadow-lg">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <Link href="/" onClick={() => setMenuOpen(false)} className="text-sm font-medium text-slate-700 hover:text-blue-600 transition-colors">
               Explorer
             </Link>
             <Link href="/compare" onClick={() => setMenuOpen(false)} className="text-sm font-medium text-slate-700 hover:text-blue-600 transition-colors">
               Compare
             </Link>
+            {session?.user ? (
+              <button
+                onClick={() => { setMenuOpen(false); signOut(); }}
+                className="text-sm font-medium text-rose-600 hover:text-rose-700 transition-colors"
+              >
+                Sign out
+              </button>
+            ) : (
+              <Link href="/auth/signin" onClick={() => setMenuOpen(false)} className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors">
+                Sign in
+              </Link>
+            )}
           </div>
           <div className="relative">
             <SearchBar />
           </div>
+          {session?.user && (
+            <div className="text-xs text-slate-400">
+              {session.user.email}
+            </div>
+          )}
           <div className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">
             v2.1.0-stable
           </div>
