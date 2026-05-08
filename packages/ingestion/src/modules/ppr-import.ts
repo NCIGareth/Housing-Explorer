@@ -100,10 +100,15 @@ function normalizeEircode(value: string): string | undefined {
 }
 
 function toProperCase(str: string): string {
-  // Handle names like "O'Connor", "McDonald", and common Irish prefixes
-  return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
-    .replace(/'\w/g, c => c.toUpperCase())
-    .replace(/\bMc\w/g, c => c.slice(0, 2) + c.charAt(2).toUpperCase() + c.slice(3));
+  // Title-case by word (not \b which breaks on apostrophes), then fix hyphens and Irish prefixes
+  return str.toLowerCase()
+    .split(" ")
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ")
+    .replace(/-(\w)/g, (_, c) => "-" + c.toUpperCase())
+    .replace(/\b[ODN]'\w/g, c => c.slice(0, 2) + c.charAt(2).toUpperCase() + c.slice(3))
+    .replace(/\bMc\w/g, c => c.slice(0, 2) + c.charAt(2).toUpperCase() + c.slice(3))
+    .replace(/\bMac\w/g, c => c.slice(0, 3) + c.charAt(3).toUpperCase() + c.slice(4));
 }
 
 function normalizeAddress(address: string): string {

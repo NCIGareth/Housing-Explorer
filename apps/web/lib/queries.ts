@@ -1,4 +1,3 @@
-import type { PrismaClient } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 
 /** Universal check for Next.js build phase */
@@ -59,7 +58,7 @@ export async function getLocalCrimeStats(county: string, locality?: string) {
   }
 
   // If locality provided, narrow to stations serving that area
-  let where: any;
+  let where: Prisma.HistoricalMetricWhereInput;
   if (locality) {
     where = {
       geography: { contains: locality, mode: "insensitive" },
@@ -155,8 +154,6 @@ export async function getPprMedianPriceByMonth(params: {
   `;
   return result as Array<{ period: string; value: number }>;
 }
-
-type PprMedianPriceResult = { period: string; value: number };
 
 type PprFilterParams = {
   county: string;
