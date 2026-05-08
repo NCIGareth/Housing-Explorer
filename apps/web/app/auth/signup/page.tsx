@@ -1,21 +1,30 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function SignUpPage() {
   const router = useRouter();
-  const supabase = createClient();
+  const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(null);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    try {
+      setSupabase(createClient());
+    } catch {
+      setError("Failed to initialize authentication client");
+    }
+  }, []);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!supabase) return;
     setLoading(true);
     setError("");
 
@@ -24,6 +33,7 @@ export default function SignUpPage() {
       password,
       options: {
         data: { name },
+        emailRedirectTo: window.location.origin,
       },
     });
 
@@ -99,7 +109,7 @@ export default function SignUpPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !supabase}
             className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
             {loading ? "Creating account..." : "Create account"}

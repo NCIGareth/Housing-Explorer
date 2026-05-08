@@ -177,7 +177,7 @@ export default async function PprSaleDetailPage({ params }: Props) {
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center gap-2">
-              <span className="text-xl">🔍</span>
+              <span className="text-xl" aria-hidden="true">🔍</span>
               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900">Deep Dive Research</h3>
             </div>
             <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
@@ -185,23 +185,23 @@ export default async function PprSaleDetailPage({ params }: Props) {
             </p>
 
             <div className="grid grid-cols-1 gap-2 pt-2">
-              <a href={mapsUrl} target="_blank" className="flex items-center justify-between px-3 py-2.5 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-xl text-[11px] font-bold transition-all border border-violet-100 group">
+              <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between px-3 py-2.5 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-xl text-[11px] font-bold transition-all border border-violet-100 group">
                 Google Maps (Street View)
                 <span className="opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
               </a>
-              <a href={floorplanUrl} target="_blank" className="flex items-center justify-between px-3 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-[11px] font-bold transition-all border border-blue-100 group">
+              <a href={floorplanUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between px-3 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-[11px] font-bold transition-all border border-blue-100 group">
                 Find Floorplans
                 <span className="opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
               </a>
-              <a href={daftHistoryUrl} target="_blank" className="flex items-center justify-between px-3 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl text-[11px] font-bold transition-all border border-slate-100 group">
+              <a href={daftHistoryUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between px-3 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl text-[11px] font-bold transition-all border border-slate-100 group">
                 Listing History (Daft)
                 <span className="opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
               </a>
-              <a href={berUrl} target="_blank" className="flex items-center justify-between px-3 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-[11px] font-bold transition-all border border-emerald-100 group">
+              <a href={berUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between px-3 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-[11px] font-bold transition-all border border-emerald-100 group">
                 SEAI BER Register
                 <span className="opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
               </a>
-              <a href={planningUrl} target="_blank" className="flex items-center justify-between px-3 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl text-[11px] font-bold transition-all border border-amber-100 group">
+              <a href={planningUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between px-3 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl text-[11px] font-bold transition-all border border-amber-100 group">
                 Planning Map (MyPlan)
                 <span className="opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
               </a>

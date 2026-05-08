@@ -53,11 +53,11 @@ export async function DashboardChartsSection({ params }: { params: FilterParams 
   let pprSeries: Awaited<ReturnType<typeof getPprMedianPriceByMonth>> = [];
 
   try {
-    const results = await Promise.all([
-      getHistoricalSeries(params.county),
-      getPprMedianPriceByMonth(qp),
-    ]);
-    [historical, pprSeries] = results;
+    historical = await getHistoricalSeries(params.county);
+    const useCso = historical && historical.length > 1;
+    if (!useCso) {
+      pprSeries = await getPprMedianPriceByMonth(qp);
+    }
   } catch (error) {
     console.warn("Failed to fetch chart data:", error);
   }

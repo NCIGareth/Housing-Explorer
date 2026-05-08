@@ -18,18 +18,15 @@ export function useUser() {
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(null);
 
   useEffect(() => {
+    let supabase;
     try {
-      setSupabase(createClient());
+      supabase = createClient();
     } catch {
       setLoading(false);
+      return;
     }
-  }, []);
-
-  useEffect(() => {
-    if (!supabase) return;
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
@@ -41,7 +38,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     });
 
     return () => subscription.unsubscribe();
-  }, [supabase]);
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, loading }}>

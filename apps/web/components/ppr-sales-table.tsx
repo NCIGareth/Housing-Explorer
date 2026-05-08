@@ -99,7 +99,7 @@ export function PprSalesTable({
                     </div>
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
-                    {new Date(s.saleDate).toLocaleDateString('en-IE', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    {(typeof s.saleDate === 'string' ? new Date(s.saleDate) : s.saleDate).toLocaleDateString('en-IE', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </td>
                   <td className="px-4 py-3">
                     <span className="inline-flex px-2 py-0.5 rounded bg-slate-100 text-slate-500 text-[9px] font-bold uppercase tracking-tight">

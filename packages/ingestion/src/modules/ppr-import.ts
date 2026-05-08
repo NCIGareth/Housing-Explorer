@@ -33,8 +33,34 @@ import pLimit from "p-limit";
 // 1. Concurrency limit: Reduced to 10 to stay within Supabase session limits.
 const limit = pLimit(10);
 
-// 2. Geocoding Cache: Minimizes redundant API calls to your local Nominatim instance.
-const geoCache = new Map<string, { lat: number | null; lon: number | null; precision: string }>();
+// 2. Geocoding Cache with LRU eviction: Prevents memory exhaustion while keeping recent entries.
+class LRUMap<K, V> {
+  private map = new Map<K, V>();
+  constructor(private maxSize: number) {}
+  get(key: K): V | undefined {
+    const val = this.map.get(key);
+    if (val !== undefined) {
+      this.map.delete(key);
+      this.map.set(key, val);
+    }
+    return val;
+  }
+  set(key: K, value: V): void {
+    if (this.map.size >= this.maxSize) {
+      const first = this.map.keys().next();
+      if (!first.done) this.map.delete(first.value);
+    }
+    this.map.set(key, value);
+  }
+  has(key: K): boolean {
+    return this.map.has(key);
+  }
+  clear(): void {
+    this.map.clear();
+  }
+}
+
+const geoCache = new LRUMap<string, { lat: number | null; lon: number | null; precision: string }>(50000);
 
 type PprCsvRow = Record<string, string>;
 let prisma: any;
@@ -302,7 +328,6 @@ async function runPprImportBatch(stream: any, sourceName: string, sinceYear?: nu
       rowsUpserted += results.filter(r => r !== null).length;
       console.log(`Progress: ${rowsRead} rows processed, ${rowsUpserted} upserted...`);
       promises = [];
-      if (geoCache.size > 50000) geoCache.clear();
     }
   }
 

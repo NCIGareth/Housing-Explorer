@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchProperties } from "@/lib/queries";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get("q");
   if (!q || q.length < 2) {
@@ -14,6 +12,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(results);
   } catch (error) {
     console.error("Search failed:", error);
-    return NextResponse.json([], { status: 200 });
+    return NextResponse.json({ error: "Search failed" }, { status: 500 });
   }
 }

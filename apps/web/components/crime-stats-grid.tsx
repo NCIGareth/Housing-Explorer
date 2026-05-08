@@ -61,7 +61,7 @@ export function CrimeStatsGrid({ stats, county }: CrimeStatsGridProps) {
                   {stat.incidents.toLocaleString()}
                 </span>
               </div>
-              <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+              <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden" role="progressbar" aria-valuenow={percentage} aria-valuemin={0} aria-valuemax={100} aria-label={`${cleanCategoryName(stat.category)}: ${stat.incidents.toLocaleString()} incidents, ${percentage.toFixed(1)}% of total`}>
                 <div 
                   className="bg-gradient-to-r from-rose-500 to-rose-400 h-1.5 rounded-full" 
                   style={{ width: `${Math.min(percentage * 2, 100)}%` }}

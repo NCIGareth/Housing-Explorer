@@ -1,19 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-
-export const dynamic = "force-dynamic";
+import { getAuthUser } from "@/lib/supabase/auth-utils";
 
 const createSchema = z.object({
   savedSearchId: z.string().optional(),
   type: z.enum(["NEW_LISTING_MATCH", "PRICE_DROP"]),
 });
-
-async function getAuthUser() {
-  const { createClient } = await import("@/lib/supabase/server");
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  return user;
-}
 
 export async function GET() {
   const { prisma } = await import("@/lib/db");
@@ -22,12 +14,12 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const alerts = await prisma.alert.findMany({
+  const items = await prisma.alert.findMany({
     where: { user: { email: user.email } },
     orderBy: { createdAt: "desc" },
     take: 100,
   });
-  return NextResponse.json({ alerts });
+  return NextResponse.json({ items });
 }
 
 export async function POST(req: Request) {

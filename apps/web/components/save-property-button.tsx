@@ -42,8 +42,8 @@ export function SavePropertyButton({ propertyId }: { propertyId: string }) {
         });
         if (res.ok) setSaved(true);
       }
-    } catch {
-      // silently fail
+    } catch (err) {
+      console.error("Failed to toggle saved property:", err);
     }
     setLoading(false);
   }

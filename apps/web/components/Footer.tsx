@@ -42,7 +42,7 @@ export default function Footer() {
             <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900">Official PPR Information</h3>
             <div className="mt-6 space-y-4 text-xs leading-relaxed text-slate-500">
               <p>
-                <strong className="text-slate-700">LPT Disclaimer:</strong> The PSRA has no role in the calculation or collection of the Local Property Tax (LPT). For information, visit the <a href="https://www.revenue.ie/en/property/local-property-tax/index.aspx" target="_blank" className="text-blue-600 hover:underline">Revenue Commissioners</a>.
+                <strong className="text-slate-700">LPT Disclaimer:</strong> The PSRA has no role in the calculation or collection of the Local Property Tax (LPT). For information, visit the <a href="https://www.revenue.ie/en/property/local-property-tax/index.aspx" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Revenue Commissioners</a>.
               </p>
               <p>
                 <strong className="text-slate-700">Data Limitations:</strong> Records include Date of Sale, Price, and Address only. No particulars (floor area, number of rooms, etc.) are recorded by the register.
@@ -67,7 +67,7 @@ export default function Footer() {
             </p>
           </div>
           <div className="flex items-center gap-6">
-            <Link href="https://www.propertypriceregister.ie" target="_blank" className="text-[10px] font-bold text-slate-400 hover:text-blue-600 transition-colors uppercase">
+            <Link href="https://www.propertypriceregister.ie" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-blue-600 transition-colors uppercase">
               Official Register
             </Link>
             <div className="h-4 w-px bg-slate-200"></div>

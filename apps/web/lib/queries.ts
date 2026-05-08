@@ -1,4 +1,5 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 /** Universal check for Next.js build phase */
 const isBuildPhase = () => process.env.NEXT_PHASE === "phase-production-build";
@@ -6,7 +7,7 @@ const isBuildPhase = () => process.env.NEXT_PHASE === "phase-production-build";
 /** Lazy-loader for Prisma to prevent initialization crashes during build worker startup */
 async function getDb() {
   const { prisma } = await import("./db");
-  return prisma as unknown as PrismaClient;
+  return prisma;
 }
 
 /** 
@@ -49,7 +50,7 @@ export async function getLocalCrimeStats(county: string) {
   if (!latestMetric) return [];
 
   // Group the crime categories across all stations that match the county name in their regional division string
-  const grouped = await prisma.historicalMetric.groupBy({
+    const grouped = await prisma.historicalMetric.groupBy({
     by: ["metric"],
     _sum: { value: true },
     where: {
@@ -59,7 +60,7 @@ export async function getLocalCrimeStats(county: string) {
     orderBy: { _sum: { value: "desc" } }
   });
 
-  return grouped.map((g: { metric: string; _sum: { value: number | null } }) => ({
+  return grouped.map((g) => ({
     category: g.metric.replace("crime_", "").trim(),
     incidents: g._sum.value || 0
   }));
@@ -134,6 +135,8 @@ export async function getPprMedianPriceByMonth(params: {
   `;
   return result as Array<{ period: string; value: number }>;
 }
+
+type PprMedianPriceResult = { period: string; value: number };
 
 type PprFilterParams = {
   county: string;
@@ -248,7 +251,7 @@ export async function getCounties() {
     by: ["county"],
     orderBy: { county: "asc" }
   });
-  return counties.map((c: { county: string | null }) => c.county).filter(Boolean) as string[];
+  return counties.map((c) => c.county).filter(Boolean) as string[];
 }
 
 /** Get top localities/addresses by transaction count */
@@ -262,7 +265,7 @@ export async function getLocalities(county?: string, limit: number = 30) {
     orderBy: { _count: { id: "desc" } },
     take: limit
   });
-  return localities.map((l: { address: string | null }) => l.address).filter(Boolean) as string[];
+  return localities.map((l) => l.address).filter(Boolean) as string[];
 }
 
 /** Get property type descriptions */
@@ -274,7 +277,7 @@ export async function getPropertyTypes() {
     _count: { id: true },
     orderBy: { _count: { id: "desc" } }
   });
-  return types.map((t: { descriptionOfProperty: string | null }) => t.descriptionOfProperty).filter(Boolean) as string[];
+  return types.map((t) => t.descriptionOfProperty).filter(Boolean) as string[];
 }
 
 /** Get the date of the most recent sale in the database */
@@ -358,6 +361,21 @@ export async function getEircodeRoutingKeyStats(params: {
   }>;
 }
 
+type SingleEircodeStatsResult = {
+  medianPrice: number | null;
+  volume: number | null;
+  growthPercent: number | null;
+};
+
+type SearchResultRow = {
+  id: string;
+  address: string;
+  county: string;
+  eircode: string | null;
+  priceEur: number;
+  saleDate: Date;
+};
+
 /** 
  * Fetches analytics for a single Eircode Routing Key.
  */
@@ -394,11 +412,7 @@ export async function getSingleEircodeRoutingKeyStats(routingKey: string, county
     FROM current_year curr, previous_year prev
   `;
 
-  const stats = result as Array<{
-    medianPrice: number | null;
-    volume: number | null;
-    growthPercent: number | null;
-  }>;
+  const stats = result as Array<SingleEircodeStatsResult>;
 
   if (!stats || stats.length === 0) return null;
 
@@ -463,12 +477,5 @@ export async function searchProperties(query: string, limit = 20) {
     LIMIT ${limit}
   `;
 
-  return results as Array<{
-    id: string;
-    address: string;
-    county: string;
-    eircode: string | null;
-    priceEur: number;
-    saleDate: Date;
-  }>;
+  return results as Array<SearchResultRow>;
 }

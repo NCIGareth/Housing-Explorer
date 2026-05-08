@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
-
 export async function POST() {
   const { createClient } = await import("@/lib/supabase/server");
   const { prisma } = await import("@/lib/db");
@@ -50,7 +48,7 @@ export async function POST() {
       });
       sent++;
     } catch (err) {
-      failed.push({ alertId: alert.id, reason: String(err) });
+      failed.push({ alertId: alert.id, reason: err instanceof Error ? err.message : String(err) });
     }
   }
 

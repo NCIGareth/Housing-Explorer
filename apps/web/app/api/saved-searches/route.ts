@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-
-export const dynamic = "force-dynamic";
+import { getAuthUser } from "@/lib/supabase/auth-utils";
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -10,13 +9,6 @@ const createSchema = z.object({
   maxPriceEur: z.number().int().optional(),
   minBeds: z.number().int().optional(),
 });
-
-async function getAuthUser() {
-  const { createClient } = await import("@/lib/supabase/server");
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  return user;
-}
 
 export async function GET() {
   const { prisma } = await import("@/lib/db");

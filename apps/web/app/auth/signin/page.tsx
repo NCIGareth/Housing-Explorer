@@ -2,22 +2,31 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 
 function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(null);
 
-  const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    try {
+      setSupabase(createClient());
+    } catch {
+      setError("Failed to initialize authentication client");
+    }
+  }, []);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!supabase) return;
     setLoading(true);
     setError("");
 
@@ -31,7 +40,6 @@ function SignInForm() {
       setLoading(false);
     } else {
       router.push(callbackUrl);
-      router.refresh();
     }
   }
 
@@ -82,7 +90,7 @@ function SignInForm() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !supabase}
             className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
             {loading ? "Signing in..." : "Sign in"}

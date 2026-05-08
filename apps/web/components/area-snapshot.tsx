@@ -16,7 +16,7 @@ export function AreaSnapshot({ routingKey, medianPrice, volume, growthPercent, c
     <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-xl">📊</span>
+          <span className="text-xl" aria-hidden="true">📊</span>
           <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900">Area Snapshot: {routingKey}</h3>
         </div>
         {growthPercent !== null && (
@@ -25,7 +25,9 @@ export function AreaSnapshot({ routingKey, medianPrice, volume, growthPercent, c
             isNegative ? 'bg-rose-50 text-rose-700 border-rose-100' : 
             'bg-slate-50 text-slate-600 border-slate-100'
           }`}>
-            {isPositive ? '↑' : isNegative ? '↓' : ''} {Math.abs(growthPercent).toFixed(1)}% YoY
+            <span aria-label={isPositive ? `Up ${Math.abs(growthPercent).toFixed(1)} percent year over year` : isNegative ? `Down ${Math.abs(growthPercent).toFixed(1)} percent year over year` : `Stable ${Math.abs(growthPercent).toFixed(1)} percent year over year`}>
+              {isPositive ? '↑' : isNegative ? '↓' : ''} {Math.abs(growthPercent).toFixed(1)}% YoY
+            </span>
           </span>
         )}
       </div>
@@ -49,7 +51,9 @@ export function AreaSnapshot({ routingKey, medianPrice, volume, growthPercent, c
         <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
           <span>Market Sentiment</span>
           <span className={isPositive ? 'text-emerald-600' : isNegative ? 'text-rose-600' : 'text-slate-600'}>
-            {isPositive ? 'Growth Phase' : isNegative ? 'Cooling' : 'Stable'}
+            <span aria-label={`Market sentiment: ${isPositive ? 'Growth Phase' : isNegative ? 'Cooling' : 'Stable'} (${isPositive ? 'increasing' : isNegative ? 'decreasing' : 'stable'} prices)`}>
+              {isPositive ? 'Growth Phase' : isNegative ? 'Cooling' : 'Stable'}
+            </span>
           </span>
         </div>
         <div className="h-1.5 w-full bg-slate-100 rounded-full mt-2 overflow-hidden">

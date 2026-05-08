@@ -22,7 +22,7 @@ const ChartTooltip = ({ active, payload }: ChartTooltipProps) => {
   return (
     <div className="bg-slate-900 text-white p-3 rounded-lg shadow-xl text-sm border border-slate-700">
       <div className="text-slate-400 mb-1">{payload[0].payload.label}</div>
-      <div className="font-bold font-outfit text-blue-400">
+      <div className="font-bold text-blue-400">
         Index: {payload[0].value}
       </div>
     </div>
@@ -63,7 +63,7 @@ export const MarketTrendChart = React.memo(function MarketTrendChart({ data, tit
     return (
       <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
         <div className="mb-6">
-          <h3 className="font-outfit font-bold text-slate-800 text-lg">{title}</h3>
+          <h3 className="font-bold text-slate-800 text-lg">{title}</h3>
           <p className="text-sm text-slate-500">{subtitle}</p>
         </div>
         <div className="h-[300px] flex items-center justify-center bg-slate-50 rounded-lg border border-dashed text-slate-400 italic text-sm">
@@ -76,7 +76,7 @@ export const MarketTrendChart = React.memo(function MarketTrendChart({ data, tit
   return (
     <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
       <div className="mb-6">
-        <h3 className="font-outfit font-bold text-slate-800 text-lg">{title}</h3>
+        <h3 className="font-bold text-slate-800 text-lg">{title}</h3>
         <p className="text-sm text-slate-500">{subtitle}</p>
       </div>
 

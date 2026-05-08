@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
-
 interface IngestionRun {
   id: string;
   source: string;
@@ -34,13 +32,10 @@ export async function GET() {
         rowsUpserted: true,
         error: true
       }
-    })) as unknown as IngestionRun[];
+    })) as IngestionRun[];
 
-    // Get basic stats
-    const [listingCount, historicalCount, userCount] = await Promise.all([
+    const [listingCount] = await Promise.all([
       prisma.listingCurrent.count({ where: { isActive: true } }),
-      prisma.historicalMetric.count(),
-      prisma.user.count()
     ]);
 
     const lastSuccessfulRun = recentRuns.find((run) => run.status === 'SUCCESS');
@@ -53,8 +48,6 @@ export async function GET() {
       database: {
         status: "connected",
         activeListings: listingCount,
-        historicalRecords: historicalCount,
-        users: userCount
       },
       ingestion: {
         lastSuccessfulRun: lastSuccessfulRun ? {
@@ -64,15 +57,8 @@ export async function GET() {
         } : null,
         lastFailedRun: lastFailedRun ? {
           source: lastFailedRun.source,
-          finishedAt: lastFailedRun.finishedAt,
           error: lastFailedRun.error
         } : null,
-        recentRuns: recentRuns.map((run) => ({
-          source: run.source,
-          status: run.status,
-          startedAt: run.startedAt,
-          duration: run.finishedAt ? (new Date(run.finishedAt).getTime() - new Date(run.startedAt).getTime()) / 1000 : null
-        }))
       }
     });
   } catch (error) {
