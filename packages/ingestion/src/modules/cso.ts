@@ -103,28 +103,19 @@ export async function fetchCsoCrimeMetrics(): Promise<CsoMetric[]> {
 }
 
 export async function upsertCsoMetrics(prisma: any, rows: CsoMetric[]) {
-  // Use Promise.all with chunks for mass insertion
-  const CHUNK_SIZE = 500;
+  const CHUNK_SIZE = 5000;
   let rowsUpserted = 0;
-  
-  for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
-    const chunk = rows.slice(i, i + CHUNK_SIZE);
-    
-    // Prisma does not have upsertMany natively, and createMany skips duplicates.
-    // Since metric/geography/period is unique, we could delete then insert, but let's just loop or use transactions.
-    const ops = chunk.map(doc => prisma.historicalMetric.upsert({
-      where: {
-        id: `${doc.source}_${doc.geography}_${doc.period}`.replace(/[^a-zA-Z0-9]/g, '_')
-      },
-      update: { value: doc.value },
-      create: {
-        id: `${doc.source}_${doc.geography}_${doc.period}`.replace(/[^a-zA-Z0-9]/g, '_'),
-        ...doc
-      }
-    }));
-    await prisma.$transaction(ops);
+
+  const data = rows.map((doc) => ({
+    id: `${doc.source}_${doc.metric}_${doc.geography}_${doc.period}`.replace(/[^a-zA-Z0-9]/g, '_'),
+    ...doc,
+  }));
+
+  for (let i = 0; i < data.length; i += CHUNK_SIZE) {
+    const chunk = data.slice(i, i + CHUNK_SIZE);
+    await prisma.historicalMetric.createMany({ data: chunk, skipDuplicates: true });
     rowsUpserted += chunk.length;
   }
-  
+
   return { rowsRead: rows.length, rowsUpserted };
 }

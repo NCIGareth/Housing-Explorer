@@ -18,7 +18,7 @@ export async function getHistoricalSeries(geography: string) {
   if (isBuildPhase()) return [];
   const prisma = await getDb();
   return prisma.historicalMetric.findMany({
-    where: { geography, metric: "residential_price_index" },
+    where: { geography, metric: "RPPI" },
     orderBy: { period: "asc" }
   });
 }
@@ -37,7 +37,7 @@ export async function getCsoMarketIndex(geography: string = "National - all resi
 }
 
 /** Aggregates the latest recorded crime statistics for stations within the specified county */
-export async function getLocalCrimeStats(county: string) {
+export async function getLocalCrimeStats(county: string, locality?: string) {
   if (isBuildPhase()) return [];
   const prisma = await getDb();
   
@@ -49,14 +49,34 @@ export async function getLocalCrimeStats(county: string) {
   
   if (!latestMetric) return [];
 
-  // Group the crime categories across all stations that match the county name in their regional division string
+  // Build geography filter: include Garda division stations for the given county
+  const geoConditions: Array<{ contains: string; mode: "insensitive" }> = [
+    { contains: county, mode: "insensitive" },
+  ];
+  // Dublin stations use D.M.R. (Dublin Metropolitan Region) naming rather than "Dublin"
+  if (county.toLowerCase() === "dublin") {
+    geoConditions.push({ contains: "D.M.R.", mode: "insensitive" });
+  }
+
+  // If locality provided, narrow to stations serving that area
+  let where: any;
+  if (locality) {
+    where = {
+      geography: { contains: locality, mode: "insensitive" },
+      period: latestMetric.period,
+    };
+  } else {
+    where = {
+      OR: geoConditions.map((c) => ({ geography: c })),
+      period: latestMetric.period,
+    };
+  }
+
+  // Group the crime categories across all matching stations
     const grouped = await prisma.historicalMetric.groupBy({
     by: ["metric"],
     _sum: { value: true },
-    where: {
-      geography: { contains: county, mode: "insensitive" },
-      period: latestMetric.period
-    },
+    where,
     orderBy: { _sum: { value: "desc" } }
   });
 
@@ -432,7 +452,7 @@ export async function getMultiHistoricalSeries(areas: string[]) {
   const results = await Promise.all(
     areas.map((area) =>
       prisma.historicalMetric.findMany({
-        where: { geography: area, metric: "residential_price_index" },
+        where: { geography: area, metric: "RPPI" },
         orderBy: { period: "asc" },
       })
     )

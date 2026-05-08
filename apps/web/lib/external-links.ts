@@ -12,17 +12,6 @@ export function getDaftHistorySearchUrl(address: string): string {
   return `https://www.google.com/search?q=${query}`;
 }
 
-export function getPlanningMapUrl(address: string, county: string): string {
-  // MyPlan.ie map query parameters have been deprecated by ESRI. 
-  // Google surfacing the specific local ePlanning portal for the address works best.
-  const query = encodeURIComponent(`${address}, ${county} planning application`);
-  return `https://www.google.com/search?q=${query}`;
-}
-
-export function getSeaiBerRegisterUrl(): string {
-  return "https://ndber.seai.ie/pass/ber/search.aspx";
-}
-
 export function getGoogleMapsUrl(address: string, eircode?: string): string {
   const queryParts = [address];
   if (eircode) queryParts.push(eircode);

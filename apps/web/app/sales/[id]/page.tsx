@@ -4,8 +4,6 @@ import { getPropertyById } from "@/lib/queries";
 import {
   getGoogleFloorplanSearchUrl,
   getDaftHistorySearchUrl,
-  getPlanningMapUrl,
-  getSeaiBerRegisterUrl,
   getGoogleMapsUrl,
 } from "@/lib/external-links";
 import { Suspense } from "react";
@@ -39,14 +37,16 @@ export default async function PprSaleDetailPage({ params }: Props) {
   }
 
   const routingKey = (sale.eircode || sale.estimatedEircode)?.substring(0, 3);
+
+  // Extract locality from address for narrowing crime stats (e.g. "Finglas" from "38 Jamestown Road, Finglas, Dublin 11")
+  const addressParts = sale.address.split(",").map((p) => p.trim());
+  const crimeLocality = addressParts.length >= 3 ? addressParts[addressParts.length - 2] : undefined;
   const vatInclusivePrice = sale.vatExclusive ? Math.round(sale.priceEur * 1.135) : null;
   const errorReportEmail = `info@psr.ie?subject=Data Error Report: ${sale.address}&body=I would like to report an error with the following listing on the Residential Property Price Register.%0D%0A%0D%0AAddress: ${sale.address}%0D%0ADate of Sale: ${sale.saleDate.toISOString().slice(0, 10)}%0D%0APrice: €${sale.priceEur.toLocaleString()}%0D%0A%0D%0ADescription of error: `;
 
   const floorplanUrl = getGoogleFloorplanSearchUrl(sale.address);
   const daftHistoryUrl = getDaftHistorySearchUrl(sale.address);
   const mapsUrl = getGoogleMapsUrl(sale.address, sale.eircode || undefined);
-  const planningUrl = getPlanningMapUrl(sale.address, sale.county);
-  const berUrl = getSeaiBerRegisterUrl();
 
   const saleData: PprPoint = {
     id: sale.id,
@@ -197,14 +197,7 @@ export default async function PprSaleDetailPage({ params }: Props) {
                 Listing History (Daft)
                 <span className="opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
               </a>
-              <a href={berUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between px-3 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-[11px] font-bold transition-all border border-emerald-100 group">
-                SEAI BER Register
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
-              </a>
-              <a href={planningUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between px-3 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl text-[11px] font-bold transition-all border border-amber-100 group">
-                Planning Map (MyPlan)
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
-              </a>
+
             </div>
           </div>
 
@@ -216,7 +209,7 @@ export default async function PprSaleDetailPage({ params }: Props) {
           </div>
 
           <Suspense fallback={<SaleCrimeSkeleton />}>
-            <SaleCrimeSection county={sale.county} />
+            <SaleCrimeSection county={sale.county} locality={crimeLocality} />
           </Suspense>
         </aside>
       </div>

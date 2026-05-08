@@ -1,0 +1,102 @@
+name: Monthly PPR Ingest
+
+on:
+  schedule:
+    - cron: "0 8 1 * *"
+  workflow_dispatch:
+    inputs:
+      full_reimport:
+        description: "Full re-import of all PPR data (not just latest month)"
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  sync:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.full_reimport }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile=false
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Sync latest PPR monthly data
+        run: pnpm ingest:ppr -- --sync
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          NOMINATIM_URL: https://nominatim.openstreetmap.org
+
+  full-reimport:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.full_reimport }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile=false
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Download and extract PPR-ALL.zip
+        run: |
+          curl -L -o PPR-ALL.zip "https://www.propertypriceregister.ie/website/npsra/ppr/npsra-ppr.nsf/Downloads/PPR-ALL.zip/\$FILE/PPR-ALL.zip"
+          unzip -o PPR-ALL.zip
+
+      - name: Full PPR re-import
+        run: pnpm ingest:ppr
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          NOMINATIM_URL: https://nominatim.openstreetmap.org
+
+  cso-sync:
+    if: ${{ !cancelled() }}
+    needs: [sync, full-reimport]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile=false
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Ingest CSO RPPI and crime data
+        run: pnpm ingest
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}

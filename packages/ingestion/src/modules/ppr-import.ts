@@ -156,6 +156,10 @@ function makeSourceKey(row: any): string {
 
 /* ================= GEOCODING ================= */
 
+const NOMINATIM_URL = process.env.NOMINATIM_URL || "http://localhost:8080";
+const isPublicApi = NOMINATIM_URL.includes("nominatim.openstreetmap.org");
+let lastGeocodeRequest = 0;
+
 async function fetchCoordinates(eircode?: string, address?: string, county?: string) {
   const cacheKey = eircode || `${address}-${county}`;
   if (geoCache.has(cacheKey)) return geoCache.get(cacheKey)!;
@@ -163,8 +167,18 @@ async function fetchCoordinates(eircode?: string, address?: string, county?: str
   let result = { lat: null as number | null, lon: null as number | null, precision: 'MISSING' };
 
   try {
+    const headers: Record<string, string> = isPublicApi
+      ? { "User-Agent": "IrelandHousingExplorer/1.0 (github.com/your-org/housing)" }
+      : {};
+
+    if (isPublicApi) {
+      const elapsed = Date.now() - lastGeocodeRequest;
+      if (elapsed < 1100) await new Promise(r => setTimeout(r, 1100 - elapsed));
+    }
+
     if (eircode) {
-      const res = await fetch(`http://localhost:8080/search?postalcode=${encodeURIComponent(eircode)}&countrycodes=ie&format=json&limit=1`);
+      const res = await fetch(`${NOMINATIM_URL}/search?postalcode=${encodeURIComponent(eircode)}&countrycodes=ie&format=json&limit=1`, { headers });
+      lastGeocodeRequest = Date.now();
       const data = await res.json() as any[];
       if (data.length > 0) {
         result = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), precision: 'EXACT' };
@@ -172,7 +186,12 @@ async function fetchCoordinates(eircode?: string, address?: string, county?: str
     }
 
     if (!result.lat && address) {
-      const res = await fetch(`http://localhost:8080/search?q=${encodeURIComponent(`${address}, ${county}, Ireland`)}&format=json&limit=1`);
+      if (isPublicApi) {
+        const elapsed = Date.now() - lastGeocodeRequest;
+        if (elapsed < 1100) await new Promise(r => setTimeout(r, 1100 - elapsed));
+      }
+      const res = await fetch(`${NOMINATIM_URL}/search?q=${encodeURIComponent(`${address}, ${county}, Ireland`)}&format=json&limit=1`, { headers });
+      lastGeocodeRequest = Date.now();
       const data = await res.json() as any[];
       if (data.length > 0) {
         result = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), precision: 'EXACT' };
@@ -266,14 +285,14 @@ async function processRow(record: any, retryCount = 0): Promise<any> {
  * The Property Price Register (PPR) website uses a predictable URL pattern for monthly downloads.
  * We use this to automatically sync the most recent month's data.
  */
-const PPR_DOWNLOAD_BASE = "https://www.propertypriceregister.ie/website/npsra/pprweb.nsf/0/5C5D7606093556FE8025875C003D1974/$FILE";
+const PPR_DOWNLOAD_BASE = "https://www.propertypriceregister.ie/website/npsra/ppr/npsra-ppr.nsf/Downloads";
 
 export async function syncLatestPprMonthly() {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const filename = `PPR-${year}-${month}.csv`;
-  const url = `${PPR_DOWNLOAD_BASE}/${filename}`;
+  const url = `${PPR_DOWNLOAD_BASE}/${filename}/$FILE/${filename}`;
 
   logInfo("Starting automated monthly sync", { url });
 
