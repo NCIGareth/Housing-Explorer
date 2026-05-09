@@ -30,7 +30,7 @@ import { logError, logInfo } from "../lib/logger";
 import { estimateRoutingKey, routingKeyCoordinates } from "../lib/eircode-heuristics";
 import pLimit from "p-limit";
 
-const RETENTION_YEARS = 15;
+const RETENTION_YEARS = 13;
 
 // 1. Concurrency limit: Reduced to 10 to stay within Supabase session limits.
 const limit = pLimit(10);
@@ -395,6 +395,7 @@ async function pruneOldPropertySales() {
 async function main() {
   const db = await import("@housing/db");
   prisma = db.prisma;
+  let exitCode = 0;
   try {
     const args = process.argv.slice(2);
     const syncMode = args.includes("--sync");
@@ -409,8 +410,10 @@ async function main() {
     }
   } catch (error) {
     console.error("Pipeline Error:", error);
+    exitCode = 1;
   } finally {
     await prisma.$disconnect();
+    process.exit(exitCode);
   }
 }
 
