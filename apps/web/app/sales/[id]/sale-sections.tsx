@@ -86,12 +86,20 @@ export async function SaleHistorySection({ sale }: { sale: PprPoint }) {
 
 export async function SaleCrimeSection({ county, locality }: { county: string; locality?: string }) {
   let crimeStats: Awaited<ReturnType<typeof getLocalCrimeStats>> = [];
+  let label = county;
   try {
-    crimeStats = await getLocalCrimeStats(county, locality);
+    // Try locality first (e.g. "Finglas"), fall back to county-wide
+    if (locality) {
+      crimeStats = await getLocalCrimeStats(county, locality);
+      if (crimeStats.length > 0) label = locality;
+    }
+    if (crimeStats.length === 0) {
+      crimeStats = await getLocalCrimeStats(county);
+    }
   } catch (error) {
     console.warn("Failed to fetch crime data:", error);
   }
-  return <CrimeStatsGrid stats={crimeStats} county={locality || county} />;
+  return <CrimeStatsGrid stats={crimeStats} county={label} />;
 }
 
 export async function SaleAreaSection({ routingKey, county }: { routingKey: string; county: string }) {

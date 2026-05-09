@@ -106,13 +106,8 @@ export async function upsertCsoMetrics(prisma: any, rows: CsoMetric[]) {
   const CHUNK_SIZE = 5000;
   let rowsUpserted = 0;
 
-  const data = rows.map((doc) => ({
-    id: `${doc.source}_${doc.metric}_${doc.geography}_${doc.period}`.replace(/[^a-zA-Z0-9]/g, '_'),
-    ...doc,
-  }));
-
-  for (let i = 0; i < data.length; i += CHUNK_SIZE) {
-    const chunk = data.slice(i, i + CHUNK_SIZE);
+  for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
+    const chunk = rows.slice(i, i + CHUNK_SIZE);
     await prisma.historicalMetric.createMany({ data: chunk, skipDuplicates: true });
     rowsUpserted += chunk.length;
   }

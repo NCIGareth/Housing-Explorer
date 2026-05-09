@@ -19,7 +19,7 @@ model User {
 }
 
 model HistoricalMetric {
-  id         String   @id @default(cuid())
+  id         Int      @id @default(autoincrement())
   source     String
   metric     String
   geography  String
@@ -28,9 +28,9 @@ model HistoricalMetric {
   unit       String
   createdAt  DateTime @default(now())
 
+  @@unique([source, metric, geography, period])
   @@index([metric, geography, period])
   @@index([geography])
-  @@index([metric])
 }
 
 model ListingCurrent {
@@ -134,8 +134,6 @@ model PropertySale {
   @@index([county, saleDate])
   @@index([saleDate, priceEur])
   @@index([eircode])
-  @@index([address])
-  @@index([descriptionOfProperty])
   @@index([county, eircode])
 }
 

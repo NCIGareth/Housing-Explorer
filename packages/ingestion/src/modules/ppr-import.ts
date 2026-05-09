@@ -30,6 +30,8 @@ import { logError, logInfo } from "../lib/logger";
 import { estimateRoutingKey, routingKeyCoordinates } from "../lib/eircode-heuristics";
 import pLimit from "p-limit";
 
+const RETENTION_YEARS = 15;
+
 // 1. Concurrency limit: Reduced to 10 to stay within Supabase session limits.
 const limit = pLimit(10);
 
@@ -364,6 +366,30 @@ async function runPprImportBatch(stream: any, sourceName: string, sinceYear?: nu
   });
 
   logInfo("PPR Import Complete", { rowsRead, rowsUpserted });
+
+  await pruneOldPropertySales();
+}
+
+async function pruneOldPropertySales() {
+  const cutoffYear = new Date().getFullYear() - RETENTION_YEARS;
+  const cutoffDate = new Date(`${cutoffYear}-01-01T00:00:00Z`);
+
+  const [{ count }] = await prisma.$queryRawUnsafe(
+    `SELECT COUNT(*)::int AS count FROM "PropertySale" WHERE "saleDate" < $1`,
+    cutoffDate
+  );
+
+  if (count === 0) {
+    logInfo("prune_skip", { reason: "no rows older than cutoff", cutoffYear });
+    return;
+  }
+
+  logInfo("prune_start", { rowsToDelete: count, cutoffYear });
+  await prisma.$executeRawUnsafe(
+    `DELETE FROM "PropertySale" WHERE "saleDate" < $1`,
+    cutoffDate
+  );
+  logInfo("prune_complete", { rowsDeleted: count, cutoffYear });
 }
 
 async function main() {
