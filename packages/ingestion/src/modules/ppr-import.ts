@@ -24,6 +24,7 @@ if (process.env.DATABASE_URL) {
 
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
+import https from "node:https";
 import { parse } from "csv-parse";
 import { propertySaleSchema } from "@housing/shared";
 import { logError, logInfo } from "../lib/logger";
@@ -31,6 +32,9 @@ import { estimateRoutingKey, routingKeyCoordinates } from "../lib/eircode-heuris
 import pLimit from "p-limit";
 
 const RETENTION_YEARS = 13;
+
+// PPR site has an incomplete SSL cert chain — use a permissive agent just for this domain
+const pprAgent = new https.Agent({ rejectUnauthorized: false });
 
 // 1. Concurrency limit: Reduced to 10 to stay within Supabase session limits.
 const limit = pLimit(10);
@@ -304,7 +308,7 @@ export async function syncLatestPprMonthly() {
   logInfo("Starting automated monthly sync", { url });
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { agent: pprAgent } as RequestInit & { agent?: https.Agent });
     if (!response.ok) {
       throw new Error(`Failed to fetch PPR data: ${response.statusText} (${response.status})`);
     }
