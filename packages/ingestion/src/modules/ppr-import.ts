@@ -298,6 +298,20 @@ async function processRow(record: any, retryCount = 0): Promise<any> {
  */
 const PPR_DOWNLOAD_BASE = "https://www.propertypriceregister.ie/website/npsra/ppr/npsra-ppr.nsf/Downloads";
 
+function httpsGet(url: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    https.get(url, { agent: pprAgent }, (res) => {
+      if (!res.statusCode || res.statusCode >= 400) {
+        reject(new Error(`Failed to fetch PPR data: ${res.statusMessage} (${res.statusCode})`));
+        return;
+      }
+      const chunks: Buffer[] = [];
+      res.on("data", (chunk: Buffer) => chunks.push(chunk));
+      res.on("end", () => resolve(Buffer.concat(chunks).toString("utf-8")));
+    }).on("error", reject);
+  });
+}
+
 export async function syncLatestPprMonthly() {
   const now = new Date();
   const year = now.getFullYear();
@@ -308,20 +322,9 @@ export async function syncLatestPprMonthly() {
   logInfo("Starting automated monthly sync", { url });
 
   try {
-    const response = await fetch(url, { agent: pprAgent } as RequestInit & { agent?: https.Agent });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch PPR data: ${response.statusText} (${response.status})`);
-    }
-
-    const reader = response.body?.getReader();
-    if (!reader) throw new Error("No response body available from PPR site.");
-
-    // Convert Web ReadableStream to Node.js Readable if possible, or just use a helper
-    // For simplicity in this environment, we'll stream it manually
-    const text = await response.text();
+    const text = await httpsGet(url);
     const { Readable } = await import("node:stream");
     const stream = Readable.from([text]).pipe(parse({ columns: true, bom: true, skip_empty_lines: true }));
-
     return await runPprImportBatch(stream, filename);
   } catch (error) {
     logError("Monthly sync failed", { error: String(error) });
