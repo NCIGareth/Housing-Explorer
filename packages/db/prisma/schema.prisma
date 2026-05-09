@@ -134,7 +134,6 @@ model PropertySale {
   @@index([county, saleDate])
   @@index([saleDate, priceEur])
   @@index([eircode])
-  @@index([county, eircode])
 }
 
 model VerifiedEircodeMap {
