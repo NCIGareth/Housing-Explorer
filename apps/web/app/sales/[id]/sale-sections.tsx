@@ -1,5 +1,6 @@
+import Link from "next/link";
 import type { PprPoint } from "@/components/market-map-openlayers";
-import { getLocalCrimeStats, getRecentPprSales, getSingleEircodeRoutingKeyStats } from "@/lib/queries";
+import { getLocalCrimeStats, getRecentPprSales, getSimilarProperties, getSingleEircodeRoutingKeyStats } from "@/lib/queries";
 import ClientMapView from "@/components/client-map-view";
 import { CrimeStatsGrid } from "@/components/crime-stats-grid";
 import { AreaSnapshot } from "@/components/area-snapshot";
@@ -118,6 +119,41 @@ export async function SaleAreaSection({ routingKey, county }: { routingKey: stri
       growthPercent={areaStats.growthPercent}
       county={county}
     />
+  );
+}
+
+export async function SimilarPropertiesSection({ address, county, excludeId }: { address: string; county: string; excludeId: string }) {
+  const similar = await getSimilarProperties(address, county, excludeId);
+
+  if (similar.length === 0) return null;
+
+  return (
+    <section className="space-y-4">
+      <h2 className="text-lg font-bold flex items-center gap-2">
+        <span className="w-2 h-2 bg-blue-500 rounded-full" />
+        Similar Properties on This Street
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        {similar.map((p) => (
+          <Link key={p.id} href={`/sales/${p.id}`} className="block p-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all no-underline">
+            <p className="text-xs text-slate-500 font-medium leading-snug line-clamp-2 mb-2" title={p.address}>
+              {p.address}
+            </p>
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-900 text-sm">
+                €{p.priceEur.toLocaleString()}
+              </span>
+              <span className="text-[10px] text-slate-400 font-medium">
+                {p.saleDate.getFullYear()}
+              </span>
+            </div>
+            {p.descriptionOfProperty && (
+              <p className="text-[10px] text-slate-400 mt-1 truncate">{p.descriptionOfProperty}</p>
+            )}
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }
 

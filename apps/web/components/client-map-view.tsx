@@ -3,7 +3,6 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import type { PprPoint, MapViewMode } from "./market-map-openlayers";
-import { PricePerUnitPanel } from "./price-per-unit-panel";
 
 const OpenLayersMap = dynamic(() => import("./market-map-openlayers"), {
   ssr: false,
@@ -48,7 +47,6 @@ export default function ClientMapView({ pprPreview = [] }: ClientMapProps) {
         </div>
       </div>
 
-      <PricePerUnitPanel points={pprPreview} />
     </div>
   );
 }

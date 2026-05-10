@@ -14,6 +14,7 @@ import {
   SaleHistorySection,
   SaleCrimeSection,
   SaleAreaSection,
+  SimilarPropertiesSection,
   SaleMapSkeleton,
   SaleHistorySkeleton,
   SaleCrimeSkeleton,
@@ -62,7 +63,7 @@ export default async function PprSaleDetailPage({ params }: Props) {
   };
 
   return (
-    <main className="max-w-5xl mx-auto p-6 space-y-8 min-h-screen">
+    <main className="max-w-7xl mx-auto p-6 space-y-8 min-h-screen">
       <nav className="flex items-center gap-2 text-sm text-slate-500 mb-4 transition-colors">
         <Link href="/" className="flex items-center gap-1.5 hover:text-blue-600 font-medium group">
           <span className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 group-hover:bg-blue-50 transition-colors">
@@ -162,57 +163,62 @@ export default async function PprSaleDetailPage({ params }: Props) {
           </div>
         </div>
 
-        <aside className="w-full md:w-80 space-y-6">
-          <div className="h-64 rounded-xl overflow-hidden border shadow-sm relative">
+        <aside className="w-full md:w-96 space-y-6">
+          <div className="h-[400px] rounded-xl overflow-hidden border shadow-sm relative">
             <Suspense fallback={<SaleMapSkeleton />}>
               <SaleMapSection sale={saleData} />
             </Suspense>
           </div>
 
-          {routingKey && (
-            <Suspense fallback={<SaleAreaSkeleton />}>
-              <SaleAreaSection routingKey={routingKey} county={sale.county} />
-            </Suspense>
-          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {routingKey && (
+              <Suspense fallback={<SaleAreaSkeleton />}>
+                <SaleAreaSection routingKey={routingKey} county={sale.county} />
+              </Suspense>
+            )}
 
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="text-xl" aria-hidden="true">🔍</span>
-              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900">Deep Dive Research</h3>
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xl" aria-hidden="true">🔍</span>
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900">Deep Dive Research</h3>
+              </div>
+              <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
+                Search for floorplans, listing history, and location on external sites.
+              </p>
+
+              <div className="grid grid-cols-1 gap-2 pt-2">
+                <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between px-3 py-2.5 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-xl text-[11px] font-bold transition-all border border-violet-100 group">
+                  Google Maps (Street View)
+                  <span className="opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
+                </a>
+                <a href={floorplanUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between px-3 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-[11px] font-bold transition-all border border-blue-100 group">
+                  Find Floorplans
+                  <span className="opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
+                </a>
+                <a href={daftHistoryUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between px-3 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl text-[11px] font-bold transition-all border border-slate-100 group">
+                  Listing History (Daft)
+                  <span className="opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
+                </a>
+              </div>
             </div>
-            <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
-              Search for floorplans, listing history, and location on external sites.
-            </p>
 
-            <div className="grid grid-cols-1 gap-2 pt-2">
-              <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between px-3 py-2.5 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-xl text-[11px] font-bold transition-all border border-violet-100 group">
-                Google Maps (Street View)
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
-              </a>
-              <a href={floorplanUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between px-3 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-[11px] font-bold transition-all border border-blue-100 group">
-                Find Floorplans
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
-              </a>
-              <a href={daftHistoryUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between px-3 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl text-[11px] font-bold transition-all border border-slate-100 group">
-                Listing History (Daft)
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
-              </a>
-
+            <div className="bg-slate-900 p-5 rounded-2xl shadow-xl space-y-4">
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Sales History on Record</h3>
+              <Suspense fallback={<SaleHistorySkeleton />}>
+                <SaleHistorySection sale={saleData} />
+              </Suspense>
             </div>
-          </div>
 
-          <div className="bg-slate-900 p-5 rounded-2xl shadow-xl space-y-4">
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Sales History on Record</h3>
-            <Suspense fallback={<SaleHistorySkeleton />}>
-              <SaleHistorySection sale={saleData} />
+            <Suspense fallback={<SaleCrimeSkeleton />}>
+              <SaleCrimeSection county={sale.county} locality={crimeLocality} />
             </Suspense>
           </div>
-
-          <Suspense fallback={<SaleCrimeSkeleton />}>
-            <SaleCrimeSection county={sale.county} locality={crimeLocality} />
-          </Suspense>
         </aside>
       </div>
+
+      <Suspense fallback={<div className="h-32 animate-pulse bg-slate-100 rounded-2xl" />}>
+        <SimilarPropertiesSection address={sale.address} county={sale.county} excludeId={sale.id} />
+      </Suspense>
 
       <footer className="pt-12 border-t border-slate-100">
         <div className="bg-slate-50 rounded-2xl p-6 text-xs text-slate-500 leading-relaxed border border-slate-100">

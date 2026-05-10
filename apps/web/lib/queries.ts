@@ -492,6 +492,32 @@ export type SearchResult = {
   saleDate: Date;
 };
 
+export async function getSimilarProperties(address: string, county: string, excludeId: string, limit = 12) {
+  if (isBuildPhase()) return [];
+  const prisma = await getDb();
+
+  const streetAddress = address.replace(/^\d+\s*/, "").trim();
+
+  return prisma.propertySale.findMany({
+    where: {
+      county,
+      address: { contains: streetAddress, mode: "insensitive" },
+      id: { not: excludeId },
+    },
+    orderBy: { saleDate: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      address: true,
+      priceEur: true,
+      saleDate: true,
+      descriptionOfProperty: true,
+      county: true,
+      eircode: true,
+    },
+  });
+}
+
 export async function searchProperties(query: string, limit = 20) {
   if (isBuildPhase()) return [];
   const prisma = await getDb();

@@ -12,7 +12,6 @@ type SavedSearch = {
   county: string | null;
   minPriceEur: number | null;
   maxPriceEur: number | null;
-  minBeds: number | null;
   createdAt: string;
   alerts: AlertItem[];
 };
@@ -35,7 +34,6 @@ export default function AlertsPage() {
   const [formCounty, setFormCounty] = useState("");
   const [formMinPrice, setFormMinPrice] = useState("");
   const [formMaxPrice, setFormMaxPrice] = useState("");
-  const [formMinBeds, setFormMinBeds] = useState("");
   const [alertType, setAlertType] = useState("NEW_LISTING_MATCH");
   const [creating, setCreating] = useState(false);
 
@@ -63,7 +61,6 @@ export default function AlertsPage() {
     if (formCounty) body.county = formCounty;
     if (formMinPrice) body.minPriceEur = parseInt(formMinPrice);
     if (formMaxPrice) body.maxPriceEur = parseInt(formMaxPrice);
-    if (formMinBeds) body.minBeds = parseInt(formMinBeds);
 
     const res = await fetch("/api/saved-searches", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
@@ -77,7 +74,7 @@ export default function AlertsPage() {
     });
 
     setShowForm(false);
-    setFormName(""); setFormCounty(""); setFormMinPrice(""); setFormMaxPrice(""); setFormMinBeds("");
+    setFormName(""); setFormCounty(""); setFormMinPrice(""); setFormMaxPrice("");
     const r = await fetch("/api/saved-searches");
     const d = await r.json();
     setSearches(d.items || []);
@@ -113,7 +110,7 @@ export default function AlertsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Name</label>
-              <input required value={formName} onChange={e => setFormName(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="e.g. Dublin 3-bed houses" />
+              <input required value={formName} onChange={e => setFormName(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="e.g. Dublin houses" />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">County</label>
@@ -126,10 +123,6 @@ export default function AlertsPage() {
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Max price (EUR)</label>
               <input type="number" value={formMaxPrice} onChange={e => setFormMaxPrice(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Min beds</label>
-              <input type="number" value={formMinBeds} onChange={e => setFormMinBeds(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Alert type</label>
@@ -157,7 +150,7 @@ export default function AlertsPage() {
                 <div>
                   <h3 className="font-semibold text-slate-900">{s.name}</h3>
                   <p className="text-xs text-slate-500 mt-1">
-                    {[s.county, s.minBeds ? `${s.minBeds}+ beds` : "", s.minPriceEur ? `€${s.minPriceEur.toLocaleString()}+` : "", s.maxPriceEur ? `up to €${s.maxPriceEur.toLocaleString()}` : ""].filter(Boolean).join(" · ") || "No filters"}
+                    {[s.county, s.minPriceEur ? `€${s.minPriceEur.toLocaleString()}+` : "", s.maxPriceEur ? `up to €${s.maxPriceEur.toLocaleString()}` : ""].filter(Boolean).join(" · ") || "No filters"}
                   </p>
                 </div>
                 <button onClick={() => deleteSearch(s.id)} className="text-xs text-rose-600 hover:text-rose-700 font-medium">Delete</button>

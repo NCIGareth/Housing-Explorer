@@ -7,7 +7,6 @@ const createSchema = z.object({
   county: z.string().optional(),
   minPriceEur: z.number().int().optional(),
   maxPriceEur: z.number().int().optional(),
-  minBeds: z.number().int().optional(),
 });
 
 export async function GET() {
