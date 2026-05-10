@@ -33,7 +33,7 @@ The ingestion pipeline enforces strict data cleaning:
 - **`@housing/shared`**: Vitest — focuses on Zod schema validation edge cases.
 - **`@housing/ingestion`**: Vitest — focuses on data quality, geocoding heuristics, and CSV column detection.
 - **`@housing/db`**: Vitest — Prisma client initialization verification.
-- **Total**: 159 tests across 10 test files.
+- **Total**: 154 tests across 9 test files.
 
 ## 5. Authentication Layer
 

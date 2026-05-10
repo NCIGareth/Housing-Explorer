@@ -43,14 +43,14 @@ Provides system health status and basic metrics.
   },
   "ingestion": {
     "lastSuccessfulRun": {
-      "source": "APPROVED_FEED",
+      "source": "PPR",
       "finishedAt": "2024-01-01T00:00:00.000Z",
       "rowsProcessed": 50
     },
     "lastFailedRun": null,
     "recentRuns": [
       {
-        "source": "APPROVED_FEED",
+        "source": "PPR",
         "status": "SUCCESS",
         "startedAt": "2024-01-01T00:00:00.000Z",
         "duration": 45.2
@@ -134,7 +134,6 @@ Retrieve user's saved searches.
       "county": "Dublin",
       "minPriceEur": 300000,
       "maxPriceEur": 600000,
-      "minBeds": 2,
       "createdAt": "2024-01-01T00:00:00.000Z",
       "updatedAt": "2024-01-01T00:00:00.000Z"
     }
@@ -154,8 +153,7 @@ Create a new saved search.
   "name": "My Search",
   "county": "Dublin",
   "minPriceEur": 250000,
-  "maxPriceEur": 500000,
-  "minBeds": 2
+  "maxPriceEur": 500000
 }
 ```
 
@@ -169,7 +167,6 @@ Create a new saved search.
     "county": "Dublin",
     "minPriceEur": 250000,
     "maxPriceEur": 500000,
-    "minBeds": 2,
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T00:00:00.000Z"
   }
@@ -359,7 +356,6 @@ Create a new alert.
 **Request Body:**
 ```json
 {
-  "userId": "user_123",
   "savedSearchId": "search_123",
   "type": "NEW_LISTING_MATCH"
 }
@@ -391,7 +387,6 @@ Send a preview email for an alert (used for testing).
 ```json
 {
   "alertId": "alert_123",
-  "userEmail": "user@example.com",
   "previewMessage": "Test alert message"
 }
 ```
@@ -399,7 +394,7 @@ Send a preview email for an alert (used for testing).
 **Response (200):**
 ```json
 {
-  "alert": {
+  "updated": {
     "id": "alert_123",
     "lastTriggeredAt": "2024-01-01T00:00:00.000Z"
   }
@@ -443,14 +438,7 @@ Delete an alert.
 
 ### Alert Types
 
-- `NEW_LISTING_MATCH`: Triggered when new listings match saved search criteria
-- `PRICE_DROP`: Triggered when prices drop on existing listings
-
-### Ingestion Sources
-
-- `CSO`: Central Statistics Office historical data
-- `APPROVED_FEED`: Current property listings feed
-- `PPR`: Property Price Register sales data
+- `NEW_LISTING_MATCH`: Triggered when new PPR property sales match saved search criteria
 
 ## Error Responses
 

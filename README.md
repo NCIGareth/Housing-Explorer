@@ -4,17 +4,17 @@ A comprehensive web application for exploring the Irish housing market by compar
 
 ## Features
 
-- **Interactive Market Map**: Explore 750,000+ historical transactions with high-precision PostGIS spatial indexing. Four view modes: Points, Heatmap, Clusters, Areas.
+- **Interactive Market Map**: Explore 686,903 historical transactions with high-precision PostGIS spatial indexing. Four view modes: Points, Heatmap, Clusters, Areas.
 - **Self-Healing Ingestion**: An automated pipeline that auto-provisions PostGIS, creates required tables, and expands address abbreviations for better geocoding.
 - **Intelligent Estimation**: Uses routing-key heuristics to provide estimated coordinates when exact geocoding is unavailable.
 - **Official Metrics**: Real-time comparison with CSO Residential Property Price Index (RPPI) data.
 - **Premium UI**: Dark-mode optimized, glassmorphic dashboard with real-time market inflation charts.
 - **User Accounts**: Email/password authentication via Supabase Auth. Sign up, sign in, profile management.
-- **Alert Management**: Create saved searches with filters (county, price range, beds) and subscribe to alert types (new listing match, price drop). Auth-protected API + management UI.
+- **Alert Management**: Create saved searches with filters (county, price range) and subscribe to alert types (new listing match). Auth-protected API + management UI.
 - **Saved Properties**: Bookmark individual property sales for later reference. Auth-protected with dedicated page.
 - **Data Export**: Download filtered property sale records as CSV.
 - **Area Comparison**: Select multiple counties to overlay historical RPPI trends on a single chart.
-- **User Accounts**: Email/password authentication via Supabase Auth.
+- **Similar Properties**: On each sale detail page, view other properties sold on the same street.
 
 ## Quick Start (Ingestion)
 
@@ -36,14 +36,14 @@ The easiest way to populate the database is using the provided PowerShell runner
 - **Frontend**: Next.js 15 (App Router), Tailwind CSS v4, Recharts, OpenLayers.
 - **Data Layer**: Prisma ORM with **PostGIS** spatial extensions.
 - **Auth**: Supabase Auth (email/password) with `@supabase/ssr` for session management.
-- **Testing**: Jest (web), Vitest (packages). 159 total tests.
+- **Testing**: Jest (web), Vitest (packages). 154 total tests.
 - **Ingestion**: Node.js/TSX workers with `p-limit` concurrency management.
 - **Geocoding**: Local Nominatim (Docker) integration for high-volume processing.
 
 ## Architecture
 
 - **Streaming Rendering**: Pages use React Suspense boundaries for progressive content delivery. ISR caching at 1-hour intervals.
-- **Database Indexing**: PropertySale indexed on `county`+`saleDate`, `saleDate`+`priceEur`, and `eircode`. Trigram and redundant composite indexes pruned for size (total DB: 433 MB).
+- **Database Indexing**: PropertySale indexed on `county`+`saleDate`, `saleDate`+`priceEur`, and `eircode`. Trigram and redundant composite indexes pruned for size (total DB: 374 MB).
 - **Monorepo**: Powered by `pnpm` and `turbo` for clean boundary management between `@housing/db`, `@housing/ingestion`, `@housing/shared`, and `apps/web`.
 
 ## Testing
