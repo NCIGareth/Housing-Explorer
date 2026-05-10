@@ -5,12 +5,17 @@
     "DIRECT_URL",
     "NEXT_PUBLIC_SUPABASE_URL",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "RESEND_API_KEY",
     "SMTP_HOST",
     "SMTP_PORT",
+    "SMTP_USER",
+    "SMTP_PASS",
     "EMAIL_FROM",
     "ADMIN_EMAILS",
     "DISPATCH_CRON_SECRET",
-    "CSO_BASE_URL"
+    "CSO_BASE_URL",
+    "VERCEL_URL",
+    "VERCEL_PROJECT_PRODUCTION_URL"
   ],
   "tasks": {
     "dev": {

@@ -13,7 +13,6 @@ export async function POST() {
   const adminEmails = (process.env.ADMIN_EMAILS || "").split(",").map(s => s.trim()).filter(Boolean);
   const isAuthorized = user?.email && adminEmails.includes(user.email);
 
-  // Check x-cron-secret header for cron-triggered dispatch
   const { headers: reqHeaders } = await import("next/headers");
   const h = await reqHeaders();
   const cronHeader = h.get("x-cron-secret");
@@ -24,7 +23,7 @@ export async function POST() {
   }
 
   const alerts = await prisma.alert.findMany({
-    where: { enabled: true },
+    where: { enabled: true, savedSearchId: { not: null } },
     include: { user: true, savedSearch: true },
   });
 
@@ -32,16 +31,75 @@ export async function POST() {
   const failed: Array<{ alertId: string; reason: string }> = [];
 
   for (const alert of alerts) {
-    const to = alert.user.email;
-    const searchName = alert.savedSearch?.name ?? "General";
-    const subject =
-      alert.type === "NEW_LISTING_MATCH"
-        ? `New listing match: ${searchName}`
-        : `Price drop: ${searchName}`;
-    const text = `Hello,\n\nThis is an automated alert from Ireland Housing Explorer.\n\nType: ${alert.type}\nSaved search: ${searchName}\n\nLog in to view details.\n\n— Ireland Housing Explorer`;
+    if (!alert.user.email || !alert.savedSearch) continue;
+
+    const since = alert.lastTriggeredAt ?? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const criteria = alert.savedSearch;
+
+    let listings: Array<{ title: string; locality: string | null; askingPriceEur: number; beds: number | null; listingUrl: string; previousPriceEur: number | null }> = [];
+
+    if (alert.type === "NEW_LISTING_MATCH") {
+      const filters: any[] = [{ createdAt: { gt: since } }];
+      if (criteria.county) filters.push({ county: criteria.county });
+      if (criteria.minPriceEur != null) filters.push({ askingPriceEur: { gte: criteria.minPriceEur } });
+      if (criteria.maxPriceEur != null) filters.push({ askingPriceEur: { lte: criteria.maxPriceEur } });
+      if (criteria.minBeds != null) filters.push({ beds: { gte: criteria.minBeds } });
+
+      listings = await prisma.listingCurrent.findMany({
+        where: { AND: filters },
+        select: { title: true, locality: true, askingPriceEur: true, beds: true, listingUrl: true, previousPriceEur: true },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      });
+    }
+
+    if (alert.type === "PRICE_DROP") {
+      const filters: any[] = [
+        { previousPriceEur: { not: null } },
+        { priceUpdatedAt: { gt: since } },
+      ];
+      if (criteria.county) filters.push({ county: criteria.county });
+      if (criteria.minPriceEur != null) filters.push({ askingPriceEur: { gte: criteria.minPriceEur } });
+      if (criteria.maxPriceEur != null) filters.push({ askingPriceEur: { lte: criteria.maxPriceEur } });
+      if (criteria.minBeds != null) filters.push({ beds: { gte: criteria.minBeds } });
+
+      const candidates = await prisma.listingCurrent.findMany({
+        where: { AND: filters },
+        select: { title: true, locality: true, askingPriceEur: true, beds: true, listingUrl: true, previousPriceEur: true },
+        orderBy: { priceUpdatedAt: "desc" },
+        take: 50,
+      });
+
+      listings = candidates.filter(l => l.previousPriceEur != null && l.previousPriceEur > l.askingPriceEur).slice(0, 20);
+    }
+
+    if (listings.length === 0) continue;
+
+    const lines = listings.map(l => {
+      const location = l.locality ? ` in ${l.locality}` : "";
+      const beds = l.beds != null ? `, ${l.beds} bed` : "";
+      const drop = l.previousPriceEur ? ` (was €${l.previousPriceEur.toLocaleString()})` : "";
+      return `- €${l.askingPriceEur.toLocaleString()}${drop} — ${l.title}${beds}${location}\n  ${l.listingUrl}`;
+    });
+
+    const subject = alert.type === "NEW_LISTING_MATCH"
+      ? `New listings: ${criteria.name}`
+      : `Price drops: ${criteria.name}`;
+
+    const text = [
+      `Hello,`,
+      ``,
+      `${listings.length} matching ${alert.type === "NEW_LISTING_MATCH" ? "listing" : "price drop"}${listings.length > 1 ? "s" : ""} found for "${criteria.name}":`,
+      ``,
+      ...lines,
+      ``,
+      `Log in to manage your alerts: https://${process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL || "irelandhousingexplorer.com"}/account/alerts`,
+      ``,
+      `— Ireland Housing Explorer`,
+    ].join("\n");
 
     try {
-      await sendAlertEmail({ to, subject, text });
+      await sendAlertEmail({ to: alert.user.email, subject, text });
       await prisma.alert.update({
         where: { id: alert.id },
         data: { lastTriggeredAt: new Date() },

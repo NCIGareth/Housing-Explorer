@@ -1,4 +1,10 @@
 {
   "framework": "nextjs",
-  "outputDirectory": ".next"
+  "outputDirectory": ".next",
+  "crons": [
+    {
+      "path": "/api/alerts/dispatch",
+      "schedule": "0 8 * * 1"
+    }
+  ]
 }
