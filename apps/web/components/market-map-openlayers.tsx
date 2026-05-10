@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { Map, View, Overlay } from "ol";
+import { Map as OlMap, View, Overlay } from "ol";
 import TileLayer from "ol/layer/Tile";
 import OSM from "ol/source/OSM";
 import VectorLayer from "ol/layer/Vector";
@@ -132,12 +132,13 @@ export const MarketMap: React.FC<{
 }> = React.memo(({ pprPreview, points, viewMode = "points" }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<Map | null>(null);
+  const mapInstance = useRef<OlMap | null>(null);
   const vectorSourceRef = useRef(new VectorSource());
   const boundarySourceRef = useRef(new VectorSource());
   const dataLayerRef = useRef<VectorLayer | HeatmapLayer | null>(null);
   const viewModeRef = useRef(viewMode);
   viewModeRef.current = viewMode;
+  const featureMapRef = useRef<Map<string, Feature<Point>>>(new Map());
 
   const [markerCount, setMarkerCount] = useState(0);
 
@@ -185,7 +186,7 @@ export const MarketMap: React.FC<{
     boundarySourceRef.current.addFeatures(boundaryFeatures);
   }, []);
 
-  const swapDataLayer = useCallback((map: Map, source: VectorSource, mode: MapViewMode) => {
+  const swapDataLayer = useCallback((map: OlMap, source: VectorSource, mode: MapViewMode) => {
     const oldLayer = dataLayerRef.current;
     if (oldLayer) map.removeLayer(oldLayer);
 
@@ -233,32 +234,57 @@ export const MarketMap: React.FC<{
     const map = mapInstance.current;
     if (!map) return;
 
-    const features = dataToUse
-      .map((point) => {
-        const coords = resolvePointCoords(point);
-        if (!coords) return null;
-        return new Feature({
+    const featureMap = featureMapRef.current;
+    const newIds = new Set(dataToUse.map((p) => p.id));
+
+    let changed = false;
+
+    for (const [id, feature] of featureMap) {
+      if (!newIds.has(id)) {
+        vectorSource.removeFeature(feature);
+        featureMap.delete(id);
+        changed = true;
+      }
+    }
+
+    for (const point of dataToUse) {
+      const coords = resolvePointCoords(point);
+      if (!coords) continue;
+
+      const existing = featureMap.get(point.id);
+      if (existing) {
+        const geom = existing.getGeometry()!;
+        const newCoords = fromLonLat([coords.lon, coords.lat]);
+        const old = geom.getCoordinates();
+        if (old[0] !== newCoords[0] || old[1] !== newCoords[1]) {
+          geom.setCoordinates(newCoords);
+          changed = true;
+        }
+        existing.set("point", point);
+      } else {
+        const feature = new Feature({
           geometry: new Point(fromLonLat([coords.lon, coords.lat])),
           point,
         });
-      })
-      .filter((f): f is Feature<Point> => f !== null);
+        featureMap.set(point.id, feature);
+        vectorSource.addFeature(feature);
+        changed = true;
+      }
+    }
 
-    vectorSource.clear();
-    vectorSource.addFeatures(features);
-    setMarkerCount(features.length);
+    setMarkerCount(featureMap.size);
+
+    if (!changed) return;
 
     rebuildBoundaries();
 
-    if (features.length > 0) {
-      const extent = vectorSource.getExtent();
-      if (extent && extent[0] !== Infinity) {
-        map.getView().fit(extent, {
-          padding: [50, 50, 50, 50],
-          maxZoom: 16,
-          duration: 400,
-        });
-      }
+    const extent = vectorSource.getExtent();
+    if (extent && extent[0] !== Infinity) {
+      map.getView().fit(extent, {
+        padding: [50, 50, 50, 50],
+        maxZoom: 16,
+        duration: 400,
+      });
     }
   }, [dataToUse, rebuildBoundaries]);
 
@@ -275,7 +301,7 @@ export const MarketMap: React.FC<{
 
     const tileLayer = new TileLayer({ source: new OSM() });
 
-    const map = new Map({
+    const map = new OlMap({
       target: mapRef.current,
       layers: [tileLayer],
       overlays: [overlay],
