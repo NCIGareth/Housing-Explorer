@@ -16,7 +16,7 @@ export function SavePropertyButton({ propertyId }: { propertyId: string }) {
       if (d.items?.some((f: { propertyId: string }) => f.propertyId === propertyId)) {
         setSaved(true);
       }
-    }).catch(() => {});
+    }).catch((e) => console.error("Failed to check saved property:", e));
   }, [user, propertyId]);
 
   async function handleClick() {

@@ -1,16 +1,5 @@
 import { NextResponse } from "next/server";
 
-interface IngestionRun {
-  id: string;
-  source: string;
-  status: string;
-  startedAt: Date;
-  finishedAt: Date | null;
-  rowsRead: number;
-  rowsUpserted: number;
-  error: string | null;
-}
-
 export async function GET() {
   try {
     const { prisma } = await import("@/lib/db");
@@ -19,7 +8,7 @@ export async function GET() {
     await prisma.$queryRaw`SELECT 1 as db_check`;
 
     // Get recent ingestion runs
-    const recentRuns = (await prisma.ingestionRun.findMany({
+    const recentRuns = await prisma.ingestionRun.findMany({
       orderBy: { startedAt: "desc" },
       take: 5,
       select: {
@@ -32,7 +21,7 @@ export async function GET() {
         rowsUpserted: true,
         error: true
       }
-    })) as IngestionRun[];
+    });
 
     const [listingCount] = await Promise.all([
       prisma.listingCurrent.count({ where: { isActive: true } }),

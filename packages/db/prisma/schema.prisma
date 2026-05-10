@@ -136,6 +136,7 @@ model PropertySale {
   @@index([saleDate, priceEur])
   @@index([county, priceEur])
   @@index([eircode])
+  // @@index([address], type: Gin) — created via raw SQL migration 20260510_add_trigram_index (pg_trgm GIN index)
 }
 
 model VerifiedEircodeMap {
