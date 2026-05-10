@@ -39,14 +39,16 @@ export async function POST() {
     let listings: Array<{ title: string; locality: string | null; askingPriceEur: number; beds: number | null; listingUrl: string; previousPriceEur: number | null }> = [];
 
     if (alert.type === "NEW_LISTING_MATCH") {
-      const filters: any[] = [{ createdAt: { gt: since } }];
-      if (criteria.county) filters.push({ county: criteria.county });
-      if (criteria.minPriceEur != null) filters.push({ askingPriceEur: { gte: criteria.minPriceEur } });
-      if (criteria.maxPriceEur != null) filters.push({ askingPriceEur: { lte: criteria.maxPriceEur } });
-      if (criteria.minBeds != null) filters.push({ beds: { gte: criteria.minBeds } });
-
       listings = await prisma.listingCurrent.findMany({
-        where: { AND: filters },
+        where: {
+          AND: [
+            { createdAt: { gt: since } },
+            ...(criteria.county ? [{ county: criteria.county }] : []),
+            ...(criteria.minPriceEur != null ? [{ askingPriceEur: { gte: criteria.minPriceEur } }] : []),
+            ...(criteria.maxPriceEur != null ? [{ askingPriceEur: { lte: criteria.maxPriceEur } }] : []),
+            ...(criteria.minBeds != null ? [{ beds: { gte: criteria.minBeds } }] : []),
+          ],
+        },
         select: { title: true, locality: true, askingPriceEur: true, beds: true, listingUrl: true, previousPriceEur: true },
         orderBy: { createdAt: "desc" },
         take: 20,
@@ -54,17 +56,17 @@ export async function POST() {
     }
 
     if (alert.type === "PRICE_DROP") {
-      const filters: any[] = [
-        { previousPriceEur: { not: null } },
-        { priceUpdatedAt: { gt: since } },
-      ];
-      if (criteria.county) filters.push({ county: criteria.county });
-      if (criteria.minPriceEur != null) filters.push({ askingPriceEur: { gte: criteria.minPriceEur } });
-      if (criteria.maxPriceEur != null) filters.push({ askingPriceEur: { lte: criteria.maxPriceEur } });
-      if (criteria.minBeds != null) filters.push({ beds: { gte: criteria.minBeds } });
-
       const candidates = await prisma.listingCurrent.findMany({
-        where: { AND: filters },
+        where: {
+          AND: [
+            { previousPriceEur: { not: null } },
+            { priceUpdatedAt: { gt: since } },
+            ...(criteria.county ? [{ county: criteria.county }] : []),
+            ...(criteria.minPriceEur != null ? [{ askingPriceEur: { gte: criteria.minPriceEur } }] : []),
+            ...(criteria.maxPriceEur != null ? [{ askingPriceEur: { lte: criteria.maxPriceEur } }] : []),
+            ...(criteria.minBeds != null ? [{ beds: { gte: criteria.minBeds } }] : []),
+          ],
+        },
         select: { title: true, locality: true, askingPriceEur: true, beds: true, listingUrl: true, previousPriceEur: true },
         orderBy: { priceUpdatedAt: "desc" },
         take: 50,
