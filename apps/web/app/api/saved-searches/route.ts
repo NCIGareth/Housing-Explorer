@@ -21,6 +21,7 @@ export async function GET() {
     where: { user: { email: user.email } },
     orderBy: { createdAt: "desc" },
     take: 100,
+    include: { alerts: true },
   });
   return NextResponse.json({ items });
 }
