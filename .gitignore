@@ -15,6 +15,14 @@ dist/
 
 # Large Data Sets
 PPR-ALL.csv
+PPR-ALL.zip
+*.zip
+
+# One-off admin scripts
+truncate.sql
+
+# Test artifacts
+scripts/test-eircode.mjs
 
 # AI & IDE Context Mapping
 .clinerules
