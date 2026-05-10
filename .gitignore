@@ -24,6 +24,9 @@ truncate.sql
 # Test artifacts
 scripts/test-eircode.mjs
 
+# Temp query scripts (written by agent for one-off DB queries)
+temp-*.mjs
+
 # AI & IDE Context Mapping
 .clinerules
 .clineignore
