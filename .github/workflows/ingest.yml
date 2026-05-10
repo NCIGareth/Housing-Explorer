@@ -63,7 +63,7 @@ jobs:
 
       - name: Download and extract PPR-ALL.zip
         run: |
-          curl -L -o PPR-ALL.zip "https://www.propertypriceregister.ie/website/npsra/ppr/npsra-ppr.nsf/Downloads/PPR-ALL.zip/\$FILE/PPR-ALL.zip"
+          curl -k -L -o PPR-ALL.zip "https://www.propertypriceregister.ie/website/npsra/ppr/npsra-ppr.nsf/Downloads/PPR-ALL.zip/\$FILE/PPR-ALL.zip"
           unzip -o PPR-ALL.zip
 
       - name: Full PPR re-import

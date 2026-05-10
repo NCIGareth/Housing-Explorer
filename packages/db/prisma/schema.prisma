@@ -127,7 +127,6 @@ model PropertySale {
   estimatedEircode        String?
   estimatedLatitude       Float?
   estimatedLongitude      Float?
-  geom                    Unsupported("geometry(Point, 4326)")?
   createdAt               DateTime @default(now())
   favouriteProperties     FavouriteProperty[]
 
