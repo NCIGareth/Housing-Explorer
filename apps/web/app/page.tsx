@@ -27,6 +27,7 @@ type PageProps = {
     notFullMarketPrice?: string;
     vatExclusive?: string;
     page?: string;
+    pageSize?: string;
   }>;
 };
 
@@ -44,7 +45,7 @@ export default async function Home({ searchParams }: PageProps) {
   const notFullMarketPrice = params.notFullMarketPrice === "on";
   const vatExclusive = params.vatExclusive === "on";
   const page = params.page ? Math.max(1, Number(params.page)) : 1;
-  const pageSize = 100;
+  const pageSize = Math.min(100, Math.max(10, Number(params.pageSize) || 20));
 
   const filterParams = {
     county,

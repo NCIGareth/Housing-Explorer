@@ -133,6 +133,7 @@ model PropertySale {
 
   @@index([county, saleDate])
   @@index([saleDate, priceEur])
+  @@index([county, priceEur])
   @@index([eircode])
 }
 

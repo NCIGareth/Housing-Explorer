@@ -7,7 +7,6 @@ import {
   getPprMedianPriceByMonth,
   getRecentPprSales,
   getCsoMarketIndex,
-  getPprSalesCount,
 } from "@/lib/queries";
 
 type FilterParams = {
@@ -101,18 +100,18 @@ export async function DashboardTableSection({ params, searchParams }: { params: 
   const qp = buildQueryParams(params);
 
   let pprSales: Awaited<ReturnType<typeof getRecentPprSales>> = [];
-  let pprTotalCount = 0;
+  let hasNextPage = false;
 
   try {
-    const results = await Promise.all([
-      getRecentPprSales({
-        ...qp,
-        take: params.pageSize,
-        skip: (params.page - 1) * params.pageSize,
-      }),
-      getPprSalesCount(qp),
-    ]);
-    [pprSales, pprTotalCount] = results;
+    pprSales = await getRecentPprSales({
+      ...qp,
+      take: params.pageSize + 1,
+      skip: (params.page - 1) * params.pageSize,
+    });
+    if (pprSales.length > params.pageSize) {
+      hasNextPage = true;
+      pprSales = pprSales.slice(0, params.pageSize);
+    }
   } catch (error) {
     console.warn("Failed to fetch table data:", error);
   }
@@ -128,7 +127,7 @@ export async function DashboardTableSection({ params, searchParams }: { params: 
           sales={pprSales}
           currentPage={params.page}
           pageSize={params.pageSize}
-          totalCount={pprTotalCount}
+          hasNextPage={hasNextPage}
           searchParams={searchParams}
         />
       </div>

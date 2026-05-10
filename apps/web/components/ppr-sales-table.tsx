@@ -13,42 +13,68 @@ type SaleRow = {
   vatExclusive: boolean;
 };
 
-// ... thStyle and tdStyle remain the same ...
+const PAGE_SIZES = [20, 50, 100];
 
-export function PprSalesTable({ 
-  sales, 
-  currentPage = 1, 
-  pageSize = 100,
-  totalCount = 0,
-  searchParams = {} 
-}: { 
-  sales: SaleRow[], 
-  currentPage?: number, 
-  pageSize?: number,
-  totalCount?: number,
-  searchParams?: Record<string, string | string[] | undefined> 
+export function PprSalesTable({
+  sales,
+  currentPage = 1,
+  pageSize = 20,
+  hasNextPage = false,
+  searchParams = {}
+}: {
+  sales: SaleRow[];
+  currentPage?: number;
+  pageSize?: number;
+  hasNextPage?: boolean;
+  searchParams?: Record<string, string | string[] | undefined>;
 }) {
-  const totalPages = Math.ceil(totalCount / pageSize);
-  const hasNextPage = currentPage < totalPages;
   const hasPreviousPage = currentPage > 1;
+
+  function toParam(v: string | string[] | undefined): string | undefined {
+    if (v === undefined || v === "") return undefined;
+    return Array.isArray(v) ? v[0] : v;
+  }
+
+  function buildHref(overrides: Record<string, string | undefined>) {
+    const entries = Object.entries({ ...searchParams, ...overrides })
+      .map(([k, v]) => [k, toParam(v)] as const)
+      .filter(([, v]) => v !== undefined && v !== "");
+    const qs = entries.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v!)}`).join("&");
+    return `/?${qs}`;
+  }
 
   return (
     <section className="bg-white rounded-xl overflow-hidden flex flex-col">
-      <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+      <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center gap-4">
         <div>
           <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
             Property Price Register
           </h3>
           <p className="text-[10px] text-slate-500 mt-0.5">
-            Showing {Math.min(totalCount, (currentPage - 1) * pageSize + 1)}-{Math.min(totalCount, currentPage * pageSize)} of {totalCount.toLocaleString()} official records.
+            Page {currentPage} &middot; {sales.length} records
           </p>
         </div>
-        <div className="flex gap-2 text-[10px] font-bold">
-          <span className="hidden sm:inline-flex text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">** Non-Market</span>
-          <span className="hidden sm:inline-flex text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">Ex-VAT</span>
+        <div className="flex items-center gap-3">
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+            Show
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                const el = e.target as HTMLSelectElement;
+                window.location.href = buildHref({ pageSize: el.value, page: "1" });
+              }}
+              className="text-[11px] font-bold text-slate-700 bg-white border border-slate-200 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+            >
+              {PAGE_SIZES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </label>
+          <span className="hidden sm:inline-flex text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 text-[10px] font-bold">** Non-Market</span>
+          <span className="hidden sm:inline-flex text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 text-[10px] font-bold">Ex-VAT</span>
         </div>
       </div>
-      
+
       <div className="overflow-auto max-h-[600px] relative">
         <table className="w-full border-collapse min-width-[700px]">
           <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200">
@@ -112,16 +138,15 @@ export function PprSalesTable({
           </tbody>
         </table>
       </div>
-      
-      {/* Pagination Footer */}
+
       <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center mt-auto">
         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-          Page {currentPage} of {totalPages || 1}
+          Page {currentPage}
         </div>
         <div className="flex gap-2">
           {hasPreviousPage ? (
-            <Link 
-              href={{ query: { ...searchParams, page: currentPage - 1 } }}
+            <Link
+              href={buildHref({ page: String(currentPage - 1) })}
               className="px-4 py-2 text-[10px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm uppercase tracking-widest"
             >
               Previous
@@ -131,10 +156,10 @@ export function PprSalesTable({
               Previous
             </span>
           )}
-          
+
           {hasNextPage ? (
-            <Link 
-              href={{ query: { ...searchParams, page: currentPage + 1 } }}
+            <Link
+              href={buildHref({ page: String(currentPage + 1) })}
               className="px-4 py-2 text-[10px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm uppercase tracking-widest"
             >
               Next
