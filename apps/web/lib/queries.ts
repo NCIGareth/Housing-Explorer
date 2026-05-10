@@ -446,7 +446,7 @@ export async function getMultiHistoricalSeries(areas: string[]) {
   if (areas.length === 0) return { merged: [], areas: [] };
   const prisma = await getDb();
 
-  const results = await Promise.all(
+  const csoResults = await Promise.all(
     areas.map((area) =>
       prisma.historicalMetric.findMany({
         where: { geography: area, metric: "RPPI" },
@@ -455,10 +455,22 @@ export async function getMultiHistoricalSeries(areas: string[]) {
     )
   );
 
+  const pprFallbacks: Promise<Array<{ period: string; value: number }>>[] = [];
+  for (let i = 0; i < areas.length; i++) {
+    if (csoResults[i].length === 0) {
+      pprFallbacks.push(getPprMedianPriceByMonth({ county: areas[i] }));
+    } else {
+      pprFallbacks.push(Promise.resolve([]));
+    }
+  }
+
+  const pprResults = await Promise.all(pprFallbacks);
+
   const periodMap: Record<string, Record<string, number>> = {};
   for (let i = 0; i < areas.length; i++) {
     const key = areas[i].replace(/\s+/g, "_");
-    for (const row of results[i]) {
+    const rows = csoResults[i].length > 0 ? csoResults[i] : pprResults[i];
+    for (const row of rows) {
       if (!periodMap[row.period]) periodMap[row.period] = {};
       periodMap[row.period][key] = Number(row.value);
     }
