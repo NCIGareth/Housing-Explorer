@@ -63,6 +63,23 @@ export const FilterPanel = React.memo(function FilterPanel({
 }: Props) {
   const [minPrice, setMinPrice] = useState(minPriceEur?.toString() ?? "");
   const [maxPrice, setMaxPrice] = useState(maxPriceEur?.toString() ?? "");
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+
+  function handlePresetClick(label: string, min: number | "", max: number | string) {
+    setActivePreset(label);
+    setMinPrice(min.toString());
+    setMaxPrice(max.toString());
+  }
+
+  function handleMinChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setMinPrice(e.target.value);
+    setActivePreset(null);
+  }
+
+  function handleMaxChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setMaxPrice(e.target.value);
+    setActivePreset(null);
+  }
 
   return (
     <section style={{ 
@@ -90,28 +107,28 @@ export const FilterPanel = React.memo(function FilterPanel({
 
           <div>
             <label htmlFor="minPriceEur" style={labelStyle}>Min Price (€)</label>
-            <input
-              id="minPriceEur"
-              name="minPriceEur"
-              type="number"
-              value={minPrice}
-              onChange={(e) => setMinPrice(e.target.value)}
-              placeholder="0"
-              style={inputStyle}
-            />
+              <input
+                id="minPriceEur"
+                name="minPriceEur"
+                type="number"
+                value={minPrice}
+                onChange={handleMinChange}
+                placeholder="0"
+                style={inputStyle}
+              />
           </div>
 
           <div>
             <label htmlFor="maxPriceEur" style={labelStyle}>Max Price (€)</label>
-            <input
-              id="maxPriceEur"
-              name="maxPriceEur"
-              type="number"
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(e.target.value)}
-              placeholder="No limit"
-              style={inputStyle}
-            />
+              <input
+                id="maxPriceEur"
+                name="maxPriceEur"
+                type="number"
+                value={maxPrice}
+                onChange={handleMaxChange}
+                placeholder="No limit"
+                style={inputStyle}
+              />
           </div>
 
           <div>
@@ -143,19 +160,27 @@ export const FilterPanel = React.memo(function FilterPanel({
             <button
               key={preset.label}
               type="button"
-              onClick={() => {
-                setMinPrice(preset.min.toString());
-                setMaxPrice(preset.max.toString());
-              }}
+              onClick={() => handlePresetClick(preset.label, preset.min, preset.max)}
               style={{
-                padding: "6px 12px",
-                backgroundColor: "#fff",
-                border: "1px solid #e2e8f0",
+                padding: "6px 14px",
+                backgroundColor: activePreset === preset.label ? "#2563eb" : "#fff",
+                color: activePreset === preset.label ? "#fff" : "#334155",
+                border: activePreset === preset.label ? "1px solid #2563eb" : "1px solid #e2e8f0",
                 borderRadius: "20px",
                 fontSize: "12px",
-                fontWeight: 500,
+                fontWeight: activePreset === preset.label ? 700 : 500,
                 cursor: "pointer",
-                transition: "all 0.2s"
+                transition: "all 0.15s ease"
+              }}
+              onMouseEnter={(e) => {
+                if (activePreset !== preset.label) {
+                  e.currentTarget.style.backgroundColor = "#f1f5f9";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activePreset !== preset.label) {
+                  e.currentTarget.style.backgroundColor = "#fff";
+                }
               }}
             >
               {preset.label}

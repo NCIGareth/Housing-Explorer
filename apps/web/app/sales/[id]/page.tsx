@@ -181,7 +181,7 @@ export default async function PprSaleDetailPage({ params }: Props) {
               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900">Deep Dive Research</h3>
             </div>
             <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
-              Bridge to external records for floor area, room counts, and planning history.
+              Search for floorplans, listing history, and location on external sites.
             </p>
 
             <div className="grid grid-cols-1 gap-2 pt-2">

@@ -37,7 +37,7 @@ export function PprSalesTable({
       <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
         <div>
           <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-            Registry Transaction Log
+            Property Price Register
           </h3>
           <p className="text-[10px] text-slate-500 mt-0.5">
             Showing {Math.min(totalCount, (currentPage - 1) * pageSize + 1)}-{Math.min(totalCount, currentPage * pageSize)} of {totalCount.toLocaleString()} official records.

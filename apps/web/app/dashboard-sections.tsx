@@ -70,7 +70,7 @@ export async function DashboardChartsSection({ params }: { params: FilterParams 
   }));
   const subtitle = useCso
     ? "Showing CSO residential price index (Official Trends)."
-    : "Showing median sale price from local PPR records (Real Transactions).";
+    : "Showing median sale price from local Property Price Register data.";
 
   return <ComparisonCharts historical={chartData} subtitle={subtitle} />;
 }

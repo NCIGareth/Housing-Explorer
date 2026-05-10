@@ -86,20 +86,20 @@ export default async function Home({ searchParams }: PageProps) {
             <span className="text-sm font-semibold text-slate-800">Track Trends</span>
             <span className="text-xs text-slate-500 mt-1 leading-snug">See how prices in your area have changed year-over-year</span>
           </a>
-          <a href="#map-section" className="flex flex-col items-center p-4 bg-emerald-50/80 rounded-xl border border-emerald-100 w-52 hover:bg-emerald-100/80 transition-colors no-underline">
+          <a href="#research-section" className="flex flex-col items-center p-4 bg-emerald-50/80 rounded-xl border border-emerald-100 w-52 hover:bg-emerald-100/80 transition-colors no-underline">
             <span className="text-2xl mb-1">🔍</span>
             <span className="text-sm font-semibold text-slate-800">Research a Property</span>
-            <span className="text-xs text-slate-500 mt-1 leading-snug">Find sales history, crime stats, and planning records for any address</span>
+            <span className="text-xs text-slate-500 mt-1 leading-snug">Find sales history, crime stats, and detailed location information</span>
           </a>
-          <a href="#map-section" className="flex flex-col items-center p-4 bg-amber-50/80 rounded-xl border border-amber-100 w-52 hover:bg-amber-100/80 transition-colors no-underline">
+          <a href="/compare" className="flex flex-col items-center p-4 bg-amber-50/80 rounded-xl border border-amber-100 w-52 hover:bg-amber-100/80 transition-colors no-underline">
             <span className="text-2xl mb-1">📍</span>
             <span className="text-sm font-semibold text-slate-800">Explore by Area</span>
-            <span className="text-xs text-slate-500 mt-1 leading-snug">Compare median prices across Dublin postal districts and beyond</span>
+            <span className="text-xs text-slate-500 mt-1 leading-snug">Compare price trends and CSO indices across different counties</span>
           </a>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-8">
+      <div id="research-section" className="grid grid-cols-1 gap-8">
         <FilterPanel
           county={county}
           eircode={eircode}

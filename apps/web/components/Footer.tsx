@@ -12,7 +12,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="max-w-xs text-sm leading-relaxed text-slate-500">
-              The premier evidence-driven real estate tool for Ireland. Combining 15 years of transaction history with live market inventory.
+              The premier evidence-driven property tool for Ireland. Combining 13 years of transaction history with live market inventory.
             </p>
           </div>
           

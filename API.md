@@ -494,7 +494,9 @@ All endpoints may return the following error responses:
 
 ## Rate Limiting
 
-API endpoints are rate limited to prevent abuse. Limits vary by endpoint and authentication status.
+The search endpoint (`GET /api/search`) is rate limited to 30 requests per minute per IP address. Exceeded requests receive a `429 Too Many Requests` response with a `Retry-After: 60` header. The rate limiter uses an in-memory map with automatic stale-entry cleanup every 5 minutes.
+
+Other API endpoints are not currently rate limited.
 
 ## Versioning
 

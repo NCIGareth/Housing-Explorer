@@ -23,14 +23,17 @@ The ingestion pipeline enforces strict data cleaning:
 - **Spatial Fallbacks**: Heuristic estimation (based on Routing Keys) is used when exact geocoding is unavailable.
 
 ## 3. Connectivity Strategy
-- **Direct Mode**: For large-scale ingestion (750k+ rows), we bypass the Supabase Pooler (Port 6543) and connect directly to **Port 5432**. This eliminates pooler timeouts and schema visibility lag.
+- **DATABASE_URL** (pooler): Used by the app for queries. Points to `pooler.supabase.com:5432` with `?sslmode=require&pgbouncer=true` for Prisma compatibility with transaction-mode pooling.
+- **DIRECT_URL** (direct): Used by Prisma Migrate and admin scripts. Points to `db.<ref>.supabase.co:5432` (direct, no pooler) to avoid competing with the app for pooler connections. If the direct host is IPv6-only from your network, use the pooler URL instead.
+- **Session limit**: The Supabase pooler has a 15-connection session-mode limit. Admin scripts consuming pool connections can starve the production app — use DIRECT_URL for admin queries.
+- **Large-scale ingestion**: Use the direct connection (port 5432, bypassing pooler) to eliminate timeouts and schema visibility lag.
 
 ## 4. Testing Strategy
 - **`@housing/web`**: Jest with `next/jest` — focuses on business logic, external link generators, and component rendering.
 - **`@housing/shared`**: Vitest — focuses on Zod schema validation edge cases.
 - **`@housing/ingestion`**: Vitest — focuses on data quality, geocoding heuristics, and CSV column detection.
 - **`@housing/db`**: Vitest — Prisma client initialization verification.
-- **Total**: 143 tests across 10 test files.
+- **Total**: 159 tests across 10 test files.
 
 ## 5. Authentication Layer
 

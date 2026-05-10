@@ -36,14 +36,14 @@ The easiest way to populate the database is using the provided PowerShell runner
 - **Frontend**: Next.js 15 (App Router), Tailwind CSS v4, Recharts, OpenLayers.
 - **Data Layer**: Prisma ORM with **PostGIS** spatial extensions.
 - **Auth**: Supabase Auth (email/password) with `@supabase/ssr` for session management.
-- **Testing**: Jest (web), Vitest (packages). 143 total tests.
+- **Testing**: Jest (web), Vitest (packages). 159 total tests.
 - **Ingestion**: Node.js/TSX workers with `p-limit` concurrency management.
 - **Geocoding**: Local Nominatim (Docker) integration for high-volume processing.
 
 ## Architecture
 
 - **Streaming Rendering**: Pages use React Suspense boundaries for progressive content delivery. ISR caching at 1-hour intervals.
-- **Database Indexing**: PropertySale indexed on `county`, `saleDate`, `eircode`, `address`, and `descriptionOfProperty`.
+- **Database Indexing**: PropertySale indexed on `county`+`saleDate`, `saleDate`+`priceEur`, and `eircode`. Trigram and redundant composite indexes pruned for size (total DB: 433 MB).
 - **Monorepo**: Powered by `pnpm` and `turbo` for clean boundary management between `@housing/db`, `@housing/ingestion`, `@housing/shared`, and `apps/web`.
 
 ## Testing

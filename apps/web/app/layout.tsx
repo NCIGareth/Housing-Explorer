@@ -6,7 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: "Ireland Housing Explorer",
-  description: "Cross-reference 15 years of PPR sales with live market inventory.",
+  description: "Cross-reference 13 years of Property Price Register sales with live market inventory.",
 };
 
 export const viewport: Viewport = {
@@ -35,7 +35,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <Suspense fallback={<span>Loading latest data...</span>}>
                 <RecentSaleStatus />
               </Suspense>
-              <span className="hidden md:inline">Open Market Intelligence Protocol v1.0</span>
+              <span className="hidden md:inline text-slate-400">Data from Property Price Register &amp; CSO</span>
             </div>
           </div>
 
