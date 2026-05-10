@@ -100,7 +100,7 @@ export default function AlertsPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">My Alerts</h1>
-          <p className="text-sm text-slate-500 mt-1">Manage saved searches and price alerts.</p>
+          <p className="text-sm text-slate-500 mt-1">Get notified of new PPR property sales matching your search.</p>
         </div>
         <button onClick={() => setShowForm(!showForm)} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors">
           {showForm ? "Cancel" : "New alert"}
@@ -134,8 +134,7 @@ export default function AlertsPage() {
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Alert type</label>
               <select value={alertType} onChange={e => setAlertType(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
-                <option value="NEW_LISTING_MATCH">New listing match</option>
-                <option value="PRICE_DROP">Price drop</option>
+                <option value="NEW_LISTING_MATCH">New property sales</option>
               </select>
             </div>
           </div>
@@ -148,7 +147,7 @@ export default function AlertsPage() {
       {searches.length === 0 ? (
         <div className="text-center py-16 border border-dashed border-slate-300 rounded-xl">
           <p className="text-slate-500">No saved searches yet.</p>
-          <p className="text-sm text-slate-400 mt-1">Create one to get notified about new listings or price drops.</p>
+          <p className="text-sm text-slate-400 mt-1">Get notified when new PPR property sales match your criteria.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -167,7 +166,7 @@ export default function AlertsPage() {
                 <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
                   {s.alerts.map(a => (
                     <div key={a.id} className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600">{a.type === "NEW_LISTING_MATCH" ? "New listing match" : "Price drop"}</span>
+                      <span className="text-slate-600">New property sales</span>
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${a.enabled ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
                         {a.enabled ? "Active" : "Inactive"}
                       </span>

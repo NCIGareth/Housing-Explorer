@@ -5,8 +5,6 @@ export async function POST() {
   const { prisma } = await import("@/lib/db");
   const { sendAlertEmail } = await import("@/lib/mailer");
 
-  const cronSecret = process.env.DISPATCH_CRON_SECRET;
-
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -15,8 +13,7 @@ export async function POST() {
 
   const { headers: reqHeaders } = await import("next/headers");
   const h = await reqHeaders();
-  const cronHeader = h.get("x-cron-secret");
-  const isCron = cronSecret && cronHeader === cronSecret;
+  const isCron = h.get("x-vercel-cron") === "1" || h.get("x-cron-secret") === process.env.DISPATCH_CRON_SECRET;
 
   if (!isAuthorized && !isCron) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -36,62 +33,33 @@ export async function POST() {
     const since = alert.lastTriggeredAt ?? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const criteria = alert.savedSearch;
 
-    let listings: Array<{ title: string; locality: string | null; askingPriceEur: number; beds: number | null; listingUrl: string; previousPriceEur: number | null }> = [];
-
-    if (alert.type === "NEW_LISTING_MATCH") {
-      listings = await prisma.listingCurrent.findMany({
-        where: {
-          AND: [
-            { createdAt: { gt: since } },
-            ...(criteria.county ? [{ county: criteria.county }] : []),
-            ...(criteria.minPriceEur != null ? [{ askingPriceEur: { gte: criteria.minPriceEur } }] : []),
-            ...(criteria.maxPriceEur != null ? [{ askingPriceEur: { lte: criteria.maxPriceEur } }] : []),
-            ...(criteria.minBeds != null ? [{ beds: { gte: criteria.minBeds } }] : []),
-          ],
-        },
-        select: { title: true, locality: true, askingPriceEur: true, beds: true, listingUrl: true, previousPriceEur: true },
-        orderBy: { createdAt: "desc" },
-        take: 20,
-      });
-    }
-
-    if (alert.type === "PRICE_DROP") {
-      const candidates = await prisma.listingCurrent.findMany({
-        where: {
-          AND: [
-            { previousPriceEur: { not: null } },
-            { priceUpdatedAt: { gt: since } },
-            ...(criteria.county ? [{ county: criteria.county }] : []),
-            ...(criteria.minPriceEur != null ? [{ askingPriceEur: { gte: criteria.minPriceEur } }] : []),
-            ...(criteria.maxPriceEur != null ? [{ askingPriceEur: { lte: criteria.maxPriceEur } }] : []),
-            ...(criteria.minBeds != null ? [{ beds: { gte: criteria.minBeds } }] : []),
-          ],
-        },
-        select: { title: true, locality: true, askingPriceEur: true, beds: true, listingUrl: true, previousPriceEur: true },
-        orderBy: { priceUpdatedAt: "desc" },
-        take: 50,
-      });
-
-      listings = candidates.filter(l => l.previousPriceEur != null && l.previousPriceEur > l.askingPriceEur).slice(0, 20);
-    }
-
-    if (listings.length === 0) continue;
-
-    const lines = listings.map(l => {
-      const location = l.locality ? ` in ${l.locality}` : "";
-      const beds = l.beds != null ? `, ${l.beds} bed` : "";
-      const drop = l.previousPriceEur ? ` (was €${l.previousPriceEur.toLocaleString()})` : "";
-      return `- €${l.askingPriceEur.toLocaleString()}${drop} — ${l.title}${beds}${location}\n  ${l.listingUrl}`;
+    const sales = await prisma.propertySale.findMany({
+      where: {
+        AND: [
+          { createdAt: { gt: since } },
+          ...(criteria.county ? [{ county: criteria.county }] : []),
+          ...(criteria.minPriceEur != null ? [{ priceEur: { gte: criteria.minPriceEur } }] : []),
+          ...(criteria.maxPriceEur != null ? [{ priceEur: { lte: criteria.maxPriceEur } }] : []),
+        ],
+      },
+      select: { address: true, county: true, priceEur: true, saleDate: true, descriptionOfProperty: true, propertySizeDescription: true },
+      orderBy: { createdAt: "desc" },
+      take: 20,
     });
 
-    const subject = alert.type === "NEW_LISTING_MATCH"
-      ? `New listings: ${criteria.name}`
-      : `Price drops: ${criteria.name}`;
+    if (sales.length === 0) continue;
+
+    const lines = sales.map(s => {
+      const size = s.propertySizeDescription ? ` (${s.propertySizeDescription})` : "";
+      return `- €${s.priceEur.toLocaleString()} — ${s.address}, ${s.county}${size}\n  ${s.descriptionOfProperty}, sold ${s.saleDate.toLocaleDateString()}`;
+    });
+
+    const subject = `New property sales: ${criteria.name}`;
 
     const text = [
       `Hello,`,
       ``,
-      `${listings.length} matching ${alert.type === "NEW_LISTING_MATCH" ? "listing" : "price drop"}${listings.length > 1 ? "s" : ""} found for "${criteria.name}":`,
+      `${sales.length} new sale${sales.length > 1 ? "s" : ""} matching "${criteria.name}" since ${since.toLocaleDateString()}:`,
       ``,
       ...lines,
       ``,
