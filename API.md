@@ -332,7 +332,7 @@ Retrieve user's alerts.
 **Response (200):**
 ```json
 {
-  "alerts": [
+  "items": [
     {
       "id": "alert_123",
       "userId": "user_123",

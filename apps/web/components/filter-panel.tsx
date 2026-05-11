@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 
 type Props = {
   county?: string;
@@ -91,7 +92,7 @@ export const FilterPanel = React.memo(function FilterPanel({
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
         <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800 }}>Search Filters</h3>
-        <a href="/" style={{ fontSize: "12px", color: "#2563eb", textDecoration: "none" }}>Reset</a>
+        <Link href="/" style={{ fontSize: "12px", color: "#2563eb", textDecoration: "none" }}>Reset</Link>
       </div>
 
       <form method="get" action="/" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
