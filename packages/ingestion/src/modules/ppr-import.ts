@@ -28,6 +28,7 @@ import { propertySaleSchema } from "@housing/shared";
 import { logError, logInfo } from "../lib/logger";
 import { estimateRoutingKey, routingKeyCoordinates } from "../lib/eircode-heuristics";
 import pLimit from "p-limit";
+import type { PrismaClient } from "@housing/db";
 
 const RETENTION_YEARS = 13;
 
@@ -67,7 +68,7 @@ class LRUMap<K, V> {
 const geoCache = new LRUMap<string, { lat: number | null; lon: number | null; precision: string }>(50000);
 
 type PprCsvRow = Record<string, string>;
-let prisma: any;
+let prisma: PrismaClient;
 
 /* ================= HELPERS ================= */
 
@@ -85,6 +86,8 @@ function getCell(row: PprCsvRow, ...substrings: string[]): string {
   const key = Object.keys(row).find(k => substrings.some(s => k.toLowerCase().includes(s.toLowerCase())));
   return key ? (row[key] ?? "") : "";
 }
+
+type NominatimResult = { lat: string; lon: string };
 
 function parseEuroAmountToInt(value: string): number {
   const amount = Number.parseFloat(value.replace(/[^\d.]/g, ""));
@@ -157,7 +160,7 @@ function normalizeAddress(address: string): string {
   return toProperCase(cleaned.trim());
 }
 
-function makeSourceKey(row: any): string {
+function makeSourceKey(row: { saleDate: Date; address: string; priceEur: number }): string {
   return createHash("sha1")
     .update(`${row.saleDate.toISOString()}|${row.address.toLowerCase()}|${row.priceEur}`)
     .digest("hex");
@@ -188,7 +191,7 @@ async function fetchCoordinates(eircode?: string, address?: string, county?: str
     if (eircode) {
       const res = await fetch(`${NOMINATIM_URL}/search?postalcode=${encodeURIComponent(eircode)}&countrycodes=ie&format=json&limit=1`, { headers });
       lastGeocodeRequest = Date.now();
-      const data = await res.json() as any[];
+      const data = await res.json() as NominatimResult[];
       if (data.length > 0) {
         result = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), precision: 'EXACT' };
       }
@@ -201,7 +204,7 @@ async function fetchCoordinates(eircode?: string, address?: string, county?: str
       }
       const res = await fetch(`${NOMINATIM_URL}/search?q=${encodeURIComponent(`${address}, ${county}, Ireland`)}&format=json&limit=1`, { headers });
       lastGeocodeRequest = Date.now();
-      const data = await res.json() as any[];
+      const data = await res.json() as NominatimResult[];
       if (data.length > 0) {
         result = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), precision: 'EXACT' };
       }
@@ -259,7 +262,7 @@ async function cleanRow(raw: Record<string, string>) {
   return propertySaleSchema.parse(data);
 }
 
-async function processRow(record: any, retryCount = 0): Promise<any> {
+async function processRow(record: PprCsvRow, retryCount = 0): Promise<{ id: string } | null> {
   try {
     const cleaned = await cleanRow(record);
     return await prisma.propertySale.upsert({
@@ -273,12 +276,11 @@ async function processRow(record: any, retryCount = 0): Promise<any> {
       },
       create: cleaned,
     });
-  } catch (err: any) {
-    // P2002 is "Unique constraint failed" - this happens if parallel workers 
-    // try to upsert the same key at the exact same microsecond.
-    if (err.code === 'P2002') return { id: 'duplicate' }; 
+  } catch (err: unknown) {
+    const prismaErr = err as { code?: string; message?: string };
+    if (prismaErr.code === 'P2002') return { id: 'duplicate' };
 
-    const isTransient = err.message?.includes('connection') || err.message?.includes('closed') || err.message?.includes('pool');
+    const isTransient = prismaErr.message?.includes('connection') || prismaErr.message?.includes('closed') || prismaErr.message?.includes('pool');
     if (retryCount < 3 && isTransient) {
       const delay = 1000 * (retryCount + 1);
       await new Promise(r => setTimeout(r, delay));
@@ -339,10 +341,10 @@ export async function runPprImport(csvPath: string, sinceYear?: number) {
   return runPprImportBatch(stream, csvPath, sinceYear);
 }
 
-async function runPprImportBatch(stream: any, sourceName: string, sinceYear?: number) {
+async function runPprImportBatch(stream: AsyncIterable<PprCsvRow>, sourceName: string, sinceYear?: number) {
   const run = await prisma.ingestionRun.create({ data: { source: `PPR-${sourceName}`, status: "RUNNING" } });
   let [rowsRead, rowsUpserted] = [0, 0];
-  let promises: Promise<any>[] = [];
+  let promises: Promise<{ id: string } | null>[] = [];
 
   for await (const record of stream) {
     rowsRead++;
@@ -379,7 +381,7 @@ async function pruneOldPropertySales() {
   const cutoffYear = new Date().getFullYear() - RETENTION_YEARS;
   const cutoffDate = new Date(`${cutoffYear}-01-01T00:00:00Z`);
 
-  const [{ count }] = await prisma.$queryRawUnsafe(
+  const [{ count }] = await prisma.$queryRawUnsafe<[{ count: number }]>(
     `SELECT COUNT(*)::int AS count FROM "PropertySale" WHERE "saleDate" < $1`,
     cutoffDate
   );
@@ -390,11 +392,18 @@ async function pruneOldPropertySales() {
   }
 
   logInfo("prune_start", { rowsToDelete: count, cutoffYear });
-  await prisma.$executeRawUnsafe(
-    `DELETE FROM "PropertySale" WHERE "saleDate" < $1`,
-    cutoffDate
-  );
-  logInfo("prune_complete", { rowsDeleted: count, cutoffYear });
+
+  let deleted = 0;
+  while (deleted < count) {
+    const result = await prisma.$executeRawUnsafe(
+      `DELETE FROM "PropertySale" WHERE "ctid" IN (SELECT "ctid" FROM "PropertySale" WHERE "saleDate" < $1 LIMIT 5000)`,
+      cutoffDate
+    );
+    deleted += result;
+    if (result === 0) break;
+  }
+
+  logInfo("prune_complete", { rowsDeleted: deleted, cutoffYear });
 }
 
 async function main() {

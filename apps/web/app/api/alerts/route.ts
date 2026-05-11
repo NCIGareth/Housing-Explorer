@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthUser } from "@/lib/supabase/auth-utils";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const createSchema = z.object({
   savedSearchId: z.string().optional(),
@@ -35,6 +36,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { allowed } = checkRateLimit(`alert:${user.email}`, 10);
+    if (!allowed) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     const body = createSchema.parse(await req.json());
 
     const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
@@ -59,6 +65,11 @@ export async function PATCH(req: Request) {
     const user = await getAuthUser();
     if (!user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { allowed } = checkRateLimit(`alert:${user.email}`, 10);
+    if (!allowed) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
     const payload = z
@@ -96,6 +107,11 @@ export async function DELETE(req: Request) {
     const user = await getAuthUser();
     if (!user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { allowed } = checkRateLimit(`alert:${user.email}`, 10);
+    if (!allowed) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
     const { id } = await req.json();

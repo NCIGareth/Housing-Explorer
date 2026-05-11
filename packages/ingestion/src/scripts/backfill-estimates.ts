@@ -3,7 +3,7 @@ import * as dotenv from "dotenv";
 
 dotenv.config({ path: resolve(process.cwd(), ".env") });
 
-import { PrismaClient } from "@housing/db";
+import { PrismaClient, PropertySale } from "@housing/db";
 import { estimateRoutingKey, routingKeyCoordinates } from "../lib/eircode-heuristics";
 
 const prisma = new PrismaClient();
@@ -18,7 +18,7 @@ async function main() {
   let cursor: string | undefined = undefined;
 
   while (hasMore) {
-    const properties: any[] = await prisma.propertySale.findMany({
+    const properties: PropertySale[] = await prisma.propertySale.findMany({
       where: {
         OR: [
           { eircode: null },

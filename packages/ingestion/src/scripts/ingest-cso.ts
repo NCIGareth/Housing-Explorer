@@ -4,8 +4,9 @@ dotenv.config({ path: resolve(process.cwd(), ".env") });
 
 import { fetchCsoMetrics, upsertCsoMetrics } from "../modules/cso";
 import { logInfo, logError } from "../lib/logger";
+import type { PrismaClient } from "@housing/db";
 
-let prisma: any;
+let prisma: PrismaClient;
 
 async function main() {
   const db = await import("@housing/db");

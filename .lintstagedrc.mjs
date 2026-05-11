@@ -2,8 +2,10 @@
 // Run tsc directly (not via turbo) to avoid triggering prisma generate,
 // which fails on Windows when the dev server holds the DLL lock.
 export default {
-  "**/*.{ts,tsx}": [
+  "apps/web/**/*.{ts,tsx}": [
     "scripts/run-eslint.cmd --fix",
+  ],
+  "**/*.{ts,tsx}": [
     () => [
       "pnpm --filter @housing/web exec tsc --noEmit",
       "pnpm --filter @housing/ingestion exec tsc --noEmit",

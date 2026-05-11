@@ -123,7 +123,12 @@ export async function SaleAreaSection({ routingKey, county }: { routingKey: stri
 }
 
 export async function SimilarPropertiesSection({ address, county, excludeId }: { address: string; county: string; excludeId: string }) {
-  const similar = await getSimilarProperties(address, county, excludeId);
+  let similar: Awaited<ReturnType<typeof getSimilarProperties>> = [];
+  try {
+    similar = await getSimilarProperties(address, county, excludeId);
+  } catch (error) {
+    console.error("Failed to fetch similar properties:", error);
+  }
 
   if (similar.length === 0) return null;
 

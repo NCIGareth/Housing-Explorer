@@ -2,12 +2,6 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { MarketTrendChart } from '../market-trend-chart'
 
-global.ResizeObserver = class ResizeObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
-
 describe('MarketTrendChart', () => {
   it('renders title and subtitle', () => {
     render(<MarketTrendChart data={[]} />)

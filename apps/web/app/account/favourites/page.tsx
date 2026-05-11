@@ -36,15 +36,22 @@ export default function FavouritesPage() {
     fetch("/api/favourites").then(r => r.json()).then(d => {
       setItems(d.items || []);
       setLoading(false);
+    }).catch(() => {
+      setLoading(false);
+      console.error("Failed to load favourites");
     });
   }, [user]);
 
   async function removeFav(propertyId: string) {
-    await fetch("/api/favourites", {
-      method: "DELETE", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ propertyId }),
-    });
-    setItems(s => s.filter(x => x.property.id !== propertyId));
+    try {
+      await fetch("/api/favourites", {
+        method: "DELETE", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ propertyId }),
+      });
+      setItems(s => s.filter(x => x.property.id !== propertyId));
+    } catch (err) {
+      console.error("Failed to remove favourite:", err);
+    }
   }
 
   if (authLoading || loading) {

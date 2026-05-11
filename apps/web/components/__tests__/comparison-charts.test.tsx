@@ -2,13 +2,6 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { ComparisonCharts } from '../comparison-charts'
 
-// Mock ResizeObserver which is needed by Recharts ResponsiveContainer
-global.ResizeObserver = class ResizeObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
-
 describe('ComparisonCharts', () => {
   it('renders price trend title', () => {
     render(<ComparisonCharts historical={[]} />)

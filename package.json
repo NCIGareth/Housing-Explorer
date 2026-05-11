@@ -32,7 +32,7 @@
   },
 
   "lint-staged": {
-    "*.{ts,tsx}": "pnpm --filter @housing/web exec eslint --fix"
+    "apps/web/**/*.{ts,tsx}": "pnpm --filter @housing/web exec eslint --fix"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

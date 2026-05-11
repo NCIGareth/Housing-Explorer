@@ -43,6 +43,12 @@ jobs:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
           NOMINATIM_URL: https://nominatim.openstreetmap.org
 
+      - name: Ingest CSO RPPI and crime data
+        run: pnpm ingest
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
   full-reimport:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.full_reimport }}
     runs-on: ubuntu-latest
@@ -75,28 +81,6 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
           NOMINATIM_URL: https://nominatim.openstreetmap.org
-
-  cso-sync:
-    if: ${{ !cancelled() }}
-    needs: [sync, full-reimport]
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Generate Prisma client
-        run: pnpm db:generate
 
       - name: Ingest CSO RPPI and crime data
         run: pnpm ingest

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/supabase/auth-utils";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
   try {
@@ -49,6 +50,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { allowed } = checkRateLimit(`fav:${user.email}`, 10);
+    if (!allowed) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     const { propertyId } = await req.json();
     if (!propertyId) {
       return NextResponse.json({ error: "propertyId is required" }, { status: 400 });
@@ -83,6 +89,11 @@ export async function DELETE(req: Request) {
     const user = await getAuthUser();
     if (!user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { allowed } = checkRateLimit(`fav:${user.email}`, 10);
+    if (!allowed) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
     const { propertyId } = await req.json();

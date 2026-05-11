@@ -33,22 +33,31 @@ export function SearchBar() {
 
     setLoading(true);
     clearTimeout(debounceRef.current);
+    const mounted = { current: true };
     debounceRef.current = setTimeout(async () => {
       try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
         const data = await res.json();
-        setSuggestions(data);
-        setIsOpen(data.length > 0);
-        setSelectedIndex(-1);
+        if (mounted.current) {
+          setSuggestions(data);
+          setIsOpen(data.length > 0);
+          setSelectedIndex(-1);
+        }
       } catch {
-        setSuggestions([]);
-        setIsOpen(false);
+        if (mounted.current) {
+          setSuggestions([]);
+          setIsOpen(false);
+        }
+        console.error("Search request failed");
       } finally {
-        setLoading(false);
+        if (mounted.current) setLoading(false);
       }
     }, 250);
 
-    return () => clearTimeout(debounceRef.current);
+    return () => {
+      clearTimeout(debounceRef.current);
+      mounted.current = false;
+    };
   }, [query]);
 
   const navigate = (suggestion: SearchSuggestion) => {

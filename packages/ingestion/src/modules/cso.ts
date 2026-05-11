@@ -9,6 +9,17 @@ type CsoMetric = {
   unit: string;
 };
 
+type JsonStatResponse = {
+  id: string[];
+  value: number[];
+  dimension: Record<string, {
+    category: {
+      index: Record<string, number> | string[];
+      label: Record<string, string>;
+    };
+  }>;
+};
+
 // In production, parse true CSO payloads. For scaffold, we keep a deterministic adapter shape.
 export async function fetchCsoMetrics(): Promise<CsoMetric[]> {
   const response = await fetch("https://ws.cso.ie/public/api.restful/PxStat.Data.Cube_API.ReadDataset/HPM06/JSON-stat/2.0/en");
@@ -16,15 +27,14 @@ export async function fetchCsoMetrics(): Promise<CsoMetric[]> {
     throw new Error(`Failed to fetch CSO JSON-stat API: ${response.status} ${response.statusText}`);
   }
   
-  const d = await response.json() as any;
+  const d = await response.json() as JsonStatResponse;
   const metrics: CsoMetric[] = [];
   
-  // JSON-stat format utilizes flat multidimensional arrays. We determine the ordering via d.id
   const statIndex = d.id.indexOf("STATISTIC");
   const timeIndex = d.id.indexOf("TLIST(M1)");
   const geoIndex = d.id.indexOf("C02803V03373");
   
-  const getIds = (index: any): string[] => Array.isArray(index) ? index : Object.keys(index);
+  const getIds = (index: JsonStatResponse["dimension"][string]["category"]["index"]): string[] => Array.isArray(index) ? index : Object.keys(index);
   
   const statIds = getIds(d.dimension.STATISTIC.category.index);
   const timeIds = getIds(d.dimension["TLIST(M1)"].category.index);
@@ -64,10 +74,10 @@ export async function fetchCsoCrimeMetrics(): Promise<CsoMetric[]> {
     throw new Error(`Failed to fetch CSO JSON-stat Crime API: ${response.status} ${response.statusText}`);
   }
   
-  const d = await response.json() as any;
+  const d = await response.json() as JsonStatResponse;
   const metrics: CsoMetric[] = [];
   
-  const getIds = (index: any): string[] => Array.isArray(index) ? index : Object.keys(index);
+  const getIds = (index: JsonStatResponse["dimension"][string]["category"]["index"]): string[] => Array.isArray(index) ? index : Object.keys(index);
   
   const statIds = getIds(d.dimension.STATISTIC.category.index);
   const timeIds = getIds(d.dimension["TLIST(A1)"].category.index);
@@ -102,7 +112,9 @@ export async function fetchCsoCrimeMetrics(): Promise<CsoMetric[]> {
   return validateHistoricalMetrics(metrics);
 }
 
-export async function upsertCsoMetrics(prisma: any, rows: CsoMetric[]) {
+import type { PrismaClient } from "@housing/db";
+
+export async function upsertCsoMetrics(prisma: PrismaClient, rows: CsoMetric[]) {
   const CHUNK_SIZE = 5000;
   let rowsUpserted = 0;
 

@@ -2,12 +2,6 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { CompareChart } from '../compare-chart'
 
-global.ResizeObserver = class ResizeObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
-
 describe('CompareChart', () => {
   it('shows empty state when no data', () => {
     render(<CompareChart data={[]} areas={[]} />)

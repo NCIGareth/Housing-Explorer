@@ -46,6 +46,9 @@ export default function AlertsPage() {
     fetch("/api/saved-searches").then(r => r.json()).then(d => {
       setSearches(d.items || []);
       setLoading(false);
+    }).catch(() => {
+      setLoading(false);
+      console.error("Failed to load saved searches");
     });
   }, [user]);
 
@@ -57,35 +60,43 @@ export default function AlertsPage() {
   async function createSavedSearch(e: React.FormEvent) {
     e.preventDefault();
     setCreating(true);
-    const body: Record<string, unknown> = { name: formName };
-    if (formCounty) body.county = formCounty;
-    if (formMinPrice) body.minPriceEur = parseInt(formMinPrice);
-    if (formMaxPrice) body.maxPriceEur = parseInt(formMaxPrice);
+    try {
+      const body: Record<string, unknown> = { name: formName };
+      if (formCounty) body.county = formCounty;
+      if (formMinPrice) body.minPriceEur = parseInt(formMinPrice);
+      if (formMaxPrice) body.maxPriceEur = parseInt(formMaxPrice);
 
-    const res = await fetch("/api/saved-searches", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
-    });
-    if (!res.ok) { setCreating(false); return; }
-    const { item } = await res.json();
+      const res = await fetch("/api/saved-searches", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      });
+      if (!res.ok) { setCreating(false); return; }
+      const { item } = await res.json();
 
-    await fetch("/api/alerts", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ savedSearchId: item.id, type: alertType }),
-    });
+      await fetch("/api/alerts", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ savedSearchId: item.id, type: alertType }),
+      });
 
-    setShowForm(false);
-    setFormName(""); setFormCounty(""); setFormMinPrice(""); setFormMaxPrice("");
-    const r = await fetch("/api/saved-searches");
-    const d = await r.json();
-    setSearches(d.items || []);
+      setShowForm(false);
+      setFormName(""); setFormCounty(""); setFormMinPrice(""); setFormMaxPrice("");
+      const r = await fetch("/api/saved-searches");
+      const d = await r.json();
+      setSearches(d.items || []);
+    } catch (err) {
+      console.error("Failed to create saved search:", err);
+    }
     setCreating(false);
   }
 
   async function deleteSearch(id: string) {
-    await fetch("/api/saved-searches", {
-      method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }),
-    });
-    setSearches(s => s.filter(x => x.id !== id));
+    try {
+      await fetch("/api/saved-searches", {
+        method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }),
+      });
+      setSearches(s => s.filter(x => x.id !== id));
+    } catch (err) {
+      console.error("Failed to delete saved search:", err);
+    }
   }
 
   if (authLoading || loading) {
