@@ -7,6 +7,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 export const metadata: Metadata = {
   title: "Ireland Housing Explorer",
   description: "Cross-reference 13 years of Property Price Register sales with live market inventory.",
+  verification: { google: "j21C3tQclgD2bzga7dAHwC-OWjcNUpbHY3g5NZQ2T2Y" },
 };
 
 export const viewport: Viewport = {

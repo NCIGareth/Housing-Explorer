@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { getPropertyById } from "@/lib/queries";
 import {
   getGoogleFloorplanSearchUrl,
@@ -24,6 +25,29 @@ import {
 export const revalidate = 3600;
 
 type Props = { params: Promise<{ id: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  if (process.env.NEXT_PHASE === "phase-production-build") return {};
+
+  const { id } = await params;
+  const sale = await getPropertyById(id);
+
+  if (!sale) return { title: "Property Not Found | Ireland Housing Explorer" };
+
+  const title = `€${sale.priceEur.toLocaleString()} - ${sale.address}, ${sale.county} | Ireland Housing Explorer`;
+  const description = `${sale.descriptionOfProperty} sold for €${sale.priceEur.toLocaleString()} in ${sale.county} on ${sale.saleDate.toLocaleDateString("en-IE", { year: "numeric", month: "long", day: "numeric" })}. Search the full Property Price Register for sold prices in any Irish area.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "article",
+      siteName: "Ireland Housing Explorer",
+    },
+  };
+}
 
 export default async function PprSaleDetailPage({ params }: Props) {
   if (process.env.NEXT_PHASE === "phase-production-build") {

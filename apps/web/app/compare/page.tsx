@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { getCounties, getMultiHistoricalSeries } from "@/lib/queries";
 import { CompareForm } from "./compare-form";
 import { CompareChart } from "@/components/compare-chart";
@@ -6,6 +7,21 @@ import { CompareChart } from "@/components/compare-chart";
 type PageProps = {
   searchParams: Promise<{ areas?: string }>;
 };
+
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const { areas } = await searchParams;
+  const selected = areas ? areas.split(",").filter(Boolean) : [];
+
+  const title = selected.length >= 2
+    ? `Compare ${selected.join(" vs ")} | Ireland Housing Explorer`
+    : "Area Comparison | Ireland Housing Explorer";
+
+  const description = selected.length >= 2
+    ? `Compare median property prices across ${selected.join(", ")}. View CSO RPPI trends and PPR sales data side by side.`
+    : "Compare median property price trends across Irish counties using official CSO and PPR data.";
+
+  return { title, description };
+}
 
 async function CompareChartSection({ areas }: { areas: string }) {
   const selectedAreas = areas.split(",").filter(Boolean);
