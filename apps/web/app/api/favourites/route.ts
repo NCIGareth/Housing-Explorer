@@ -40,16 +40,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-        },
-      },
-    });
-
-    return NextResponse.json({ items });
-  } catch (error) {
-    console.error("Failed to fetch favourites:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
 
 export async function POST(req: Request) {
   try {

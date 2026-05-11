@@ -31,8 +31,9 @@ export async function sendAlertEmail({
   }
 
   const resend = new Resend(apiKey);
+  const from = process.env.EMAIL_FROM || "Ireland Housing Explorer <onboarding@resend.dev>";
   const { error } = await resend.emails.send({
-    from: "Ireland Housing Explorer <onboarding@resend.dev>",
+    from,
     to: [to],
     subject,
     text,

@@ -43,7 +43,7 @@ export default async function PprSaleDetailPage({ params }: Props) {
   const addressParts = sale.address.split(",").map((p) => p.trim());
   const crimeLocality = addressParts.length >= 3 ? addressParts[addressParts.length - 2] : undefined;
   const vatInclusivePrice = sale.vatExclusive ? Math.round(sale.priceEur * 1.135) : null;
-  const errorReportEmail = `info@psr.ie?subject=Data Error Report: ${sale.address}&body=I would like to report an error with the following listing on the Residential Property Price Register.%0D%0A%0D%0AAddress: ${sale.address}%0D%0ADate of Sale: ${sale.saleDate.toISOString().slice(0, 10)}%0D%0APrice: €${sale.priceEur.toLocaleString()}%0D%0A%0D%0ADescription of error: `;
+  const errorReportEmail = `info@psr.ie?subject=${encodeURIComponent("Data Error Report: " + sale.address)}&body=${encodeURIComponent("I would like to report an error with the following listing on the Residential Property Price Register.\n\nAddress: " + sale.address + "\nDate of Sale: " + sale.saleDate.toISOString().slice(0, 10) + "\nPrice: €" + sale.priceEur.toLocaleString() + "\n\nDescription of error: ")}`;
 
   const floorplanUrl = getGoogleFloorplanSearchUrl(sale.address);
   const daftHistoryUrl = getDaftHistorySearchUrl(sale.address);

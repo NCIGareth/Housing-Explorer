@@ -75,6 +75,7 @@ async function runAllIngestion() {
 
 // 5. The "Brain" - Controls the sequence
 async function main() {
+  // LOG REMOVED: previously leaked DATABASE_URL
   // Dynamically import the database package ONLY after env is cleaned
   const db = await import("@housing/db");
   prisma = db.prisma;
