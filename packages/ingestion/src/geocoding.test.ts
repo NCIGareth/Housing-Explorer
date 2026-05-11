@@ -24,18 +24,18 @@ describe("Eircode geocoding", () => {
       expect(normalizeEircode("d22 x2x2")).toBe("D22 X2X2");
     });
 
-    it("normalizes 6-character eircodes", () => {
-      expect(normalizeEircode("D22X2X")).toBe("D22 X2X");
+    it("rejects eircodes shorter than 7 characters", () => {
+      expect(normalizeEircode("D22X2X")).toBeUndefined();
+      expect(normalizeEircode("D22")).toBeUndefined();
     });
 
     it("corrects common OCR errors", () => {
       expect(normalizeEircode("D22X2O2")).toBe("D22 X202");
     });
 
-    it("returns undefined for invalid eircodes", () => {
+    it("returns undefined for empty or short eircodes", () => {
       expect(normalizeEircode("")).toBeUndefined();
-      expect(normalizeEircode("INVALIDTOOLONG")).toBeUndefined(); // 14 chars - invalid
-      expect(normalizeEircode("D22")).toBeUndefined(); // 3 chars - invalid
+      expect(normalizeEircode("D22")).toBeUndefined();
     });
   });
 
