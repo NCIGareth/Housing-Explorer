@@ -2,9 +2,11 @@
 // Run tsc directly (not via turbo) to avoid triggering prisma generate,
 // which fails on Windows when the dev server holds the DLL lock.
 export default {
-  "**/*.{ts,tsx}": () => [
-    "pnpm --filter @housing/web exec tsc --noEmit",
-    "pnpm --filter @housing/ingestion exec tsc --noEmit",
-    "pnpm --filter @housing/shared exec tsc --noEmit",
+  "**/*.{ts,tsx}": [
+    () => [
+      "pnpm --filter @housing/web exec tsc --noEmit",
+      "pnpm --filter @housing/ingestion exec tsc --noEmit",
+      "pnpm --filter @housing/shared exec tsc --noEmit",
+    ],
   ],
 };

@@ -340,29 +340,43 @@ export const MarketMap: React.FC<{
         }
       }
 
+      const el = overlayRef.current!;
+
       if (viewModeRef.current === "boundaries") {
         const routingKey = feature.get("routingKey") as string | undefined;
         if (routingKey) {
-          overlayRef.current!.style.display = "block";
+          el.style.display = "block";
+          el.textContent = "";
           const medianPrice = feature.get("medianPrice") as number;
           const volume = feature.get("volume") as number;
-          overlayRef.current!.innerHTML = `
-            <div class="bg-white p-0 rounded-2xl shadow-2xl border border-slate-200 w-64 overflow-hidden animate-in fade-in zoom-in duration-200">
-              <div class="p-4 space-y-3">
-                <div class="space-y-1">
-                  <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-700">
-                    Area Overview
-                  </span>
-                  <h3 class="font-bold text-slate-900">Eircode Routing Key: ${routingKey}</h3>
-                </div>
-                <div class="flex items-baseline gap-1">
-                  <span class="text-xs font-bold text-slate-400">Median</span>
-                  <span class="text-xl font-black text-slate-900">€${medianPrice.toLocaleString()}</span>
-                </div>
-                <p class="text-xs text-slate-500">Based on ${volume} recorded sales</p>
-              </div>
-            </div>
-          `;
+          const root = document.createElement("div");
+          root.className = "bg-white p-0 rounded-2xl shadow-2xl border border-slate-200 w-64 overflow-hidden animate-in fade-in zoom-in duration-200";
+          const pad = document.createElement("div");
+          pad.className = "p-4 space-y-3";
+          const s1 = document.createElement("div");
+          s1.className = "space-y-1";
+          const badge = document.createElement("span");
+          badge.className = "inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-700";
+          badge.textContent = "Area Overview";
+          const h3 = document.createElement("h3");
+          h3.className = "font-bold text-slate-900";
+          h3.textContent = `Eircode Routing Key: ${routingKey}`;
+          s1.append(badge, h3);
+          const flex = document.createElement("div");
+          flex.className = "flex items-baseline gap-1";
+          const lbl = document.createElement("span");
+          lbl.className = "text-xs font-bold text-slate-400";
+          lbl.textContent = "Median";
+          const val = document.createElement("span");
+          val.className = "text-xl font-black text-slate-900";
+          val.textContent = `€${medianPrice.toLocaleString()}`;
+          flex.append(lbl, val);
+          const p = document.createElement("p");
+          p.className = "text-xs text-slate-500";
+          p.textContent = `Based on ${volume} recorded sales`;
+          pad.append(s1, flex, p);
+          root.append(pad);
+          el.appendChild(root);
           overlay.setPosition(event.coordinate);
           return;
         }
@@ -371,38 +385,50 @@ export const MarketMap: React.FC<{
       const point = feature.get("point") as PprPoint;
       if (!point || !overlayRef.current) return;
 
-      overlayRef.current.style.display = "block";
+      el.style.display = "block";
+      el.textContent = "";
 
-      const title = point.address;
       const price = point.priceEur;
       const detailUrl = `/sales/${point.id}`;
 
-      overlayRef.current.innerHTML = `
-        <div class="bg-white p-0 rounded-2xl shadow-2xl border border-slate-200 w-64 overflow-hidden animate-in fade-in zoom-in duration-200">
-          <div class="p-4 space-y-3">
-            <div class="space-y-1">
-              <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-700">
-                Historical Sale
-              </span>
-              <h3 class="font-bold text-slate-900 leading-tight truncate">${title}</h3>
-              <p class="text-xs text-slate-500 font-medium">${point.county}</p>
-            </div>
-
-            <div class="flex items-baseline gap-1">
-              <span class="text-xs font-bold text-slate-400">€</span>
-              <span class="text-xl font-black text-slate-900">${price.toLocaleString()}</span>
-            </div>
-
-            <a href="${detailUrl}" class="flex items-center justify-center w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all hover:shadow-lg active:scale-[0.98]">
-              View Property Record
-            </a>
-          </div>
-          <button onclick="this.closest('.ol-overlay-container').style.display='none'" class="absolute top-2 right-2 h-6 w-6 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 transition-colors">
-            ✕
-          </button>
-        </div>
-      `;
-
+      const root = document.createElement("div");
+      root.className = "bg-white p-0 rounded-2xl shadow-2xl border border-slate-200 w-64 overflow-hidden animate-in fade-in zoom-in duration-200";
+      const pad = document.createElement("div");
+      pad.className = "p-4 space-y-3";
+      const s1 = document.createElement("div");
+      s1.className = "space-y-1";
+      const badge = document.createElement("span");
+      badge.className = "inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-700";
+      badge.textContent = "Historical Sale";
+      const h3 = document.createElement("h3");
+      h3.className = "font-bold text-slate-900 leading-tight truncate";
+      h3.textContent = point.address;
+      const pCounty = document.createElement("p");
+      pCounty.className = "text-xs text-slate-500 font-medium";
+      pCounty.textContent = point.county;
+      s1.append(badge, h3, pCounty);
+      const flex = document.createElement("div");
+      flex.className = "flex items-baseline gap-1";
+      const eur = document.createElement("span");
+      eur.className = "text-xs font-bold text-slate-400";
+      eur.textContent = "€";
+      const val = document.createElement("span");
+      val.className = "text-xl font-black text-slate-900";
+      val.textContent = price.toLocaleString();
+      flex.append(eur, val);
+      const a = document.createElement("a");
+      a.href = detailUrl;
+      a.className = "flex items-center justify-center w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all hover:shadow-lg active:scale-[0.98]";
+      a.textContent = "View Property Record";
+      pad.append(s1, flex, a);
+      root.append(pad);
+      const closeBtn = document.createElement("button");
+      closeBtn.className = "absolute top-2 right-2 h-6 w-6 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 transition-colors";
+      closeBtn.innerHTML = "✕";
+      closeBtn.onclick = () => overlay.setPosition(undefined);
+      root.appendChild(closeBtn);
+      root.style.position = "relative";
+      el.appendChild(root);
       overlay.setPosition(event.coordinate);
     });
 

@@ -15,7 +15,7 @@ jobs:
         with:
           node-version: 20
           cache: "pnpm"
-      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
         env:
           DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
