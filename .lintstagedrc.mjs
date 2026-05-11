@@ -3,6 +3,7 @@
 // which fails on Windows when the dev server holds the DLL lock.
 export default {
   "**/*.{ts,tsx}": [
+    "scripts/run-eslint.cmd --fix",
     () => [
       "pnpm --filter @housing/web exec tsc --noEmit",
       "pnpm --filter @housing/ingestion exec tsc --noEmit",

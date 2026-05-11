@@ -226,7 +226,7 @@ export default async function PprSaleDetailPage({ params }: Props) {
           <p>
             The Residential Property Price Register is produced by the PSRA pursuant to section 86 of the Property Services (Regulation) Act 2011.
             It is based on details filed for stamp duty purposes. The Authority does not edit this data and is not responsible for errors.
-            It is important to note that the Register is not intended as a "Property Price Index".
+            It is important to note that the Register is not intended as a &ldquo;Property Price Index&rdquo;.
             Records may include multi-unit sales or partial price declarations.
           </p>
         </div>

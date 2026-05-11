@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     || request.headers.get("x-real-ip")
     || "127.0.0.1";
 
-  const { allowed, remaining } = checkRateLimit(`search:${ip}`, 30, 60000);
+  const { allowed } = checkRateLimit(`search:${ip}`, 30, 60000);
   if (!allowed) {
     return NextResponse.json(
       { error: "Too many requests" },

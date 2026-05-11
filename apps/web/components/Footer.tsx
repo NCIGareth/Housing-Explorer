@@ -63,7 +63,7 @@ export default function Footer() {
               © {new Date().getFullYear()} Ireland Housing Explorer
             </p>
             <p className="text-[10px] text-slate-400">
-              Information provided is based on public records. Not an official "Property Price Index".
+               Information provided is based on public records. Not an official &ldquo;Property Price Index&rdquo;.
             </p>
           </div>
           <div className="flex items-center gap-6">

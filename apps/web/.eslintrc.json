@@ -9,6 +9,11 @@
   "plugins": [
     "@typescript-eslint"
   ],
+  "settings": {
+    "next": {
+      "rootDir": "."
+    }
+  },
   "env": {
     "browser": true,
     "node": true,

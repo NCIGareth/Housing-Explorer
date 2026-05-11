@@ -441,7 +441,7 @@ export const MarketMap: React.FC<{
       map.setTarget(undefined);
       mapInstance.current = null;
     };
-  }, []);
+  }, [swapDataLayer]);
 
   /* ================= SWAP LAYER ON VIEW MODE CHANGE ================= */
 
