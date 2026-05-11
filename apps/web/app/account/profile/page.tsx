@@ -5,12 +5,10 @@ export const dynamic = "force-dynamic";
 import { useUser } from "@/components/auth-provider";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 
 export default function ProfilePage() {
   const { user, loading: authLoading } = useUser();
   const router = useRouter();
-  const supabase = createClient();
 
   const [name, setName] = useState("");
 
@@ -33,27 +31,18 @@ export default function ProfilePage() {
     setMessage("");
     setError("");
 
-    const updates: Record<string, unknown> = {};
-    if (name) {
-      updates.data = { name };
-    }
+    const res = await fetch("/api/auth/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name || undefined, newPassword: newPassword || undefined }),
+    });
 
-    if (newPassword) {
-      const { error: pwdErr } = await supabase.auth.updateUser({ password: newPassword });
-      if (pwdErr) {
-        setError(pwdErr.message);
-        setSaving(false);
-        return;
-      }
-    }
+    const data = await res.json();
 
-    if (name) {
-      const { error: updateErr } = await supabase.auth.updateUser({ data: { name } });
-      if (updateErr) {
-        setError(updateErr.message);
-        setSaving(false);
-        return;
-      }
+    if (!res.ok) {
+      setError(data.error || "Failed to update profile");
+      setSaving(false);
+      return;
     }
 
     setMessage("Profile updated successfully");

@@ -1,3 +1,9 @@
+// NOTE: This is an in-memory rate limiter that only works in single-process
+// environments (local dev, single-instance deployments). On Vercel serverless,
+// each invocation is a separate process with its own memory, so this provides
+// no rate limiting in production. To enforce rate limits on Vercel, replace
+// this with @upstash/redis or @vercel/kv.
+
 const rateMap = new Map<string, { count: number; resetAt: number }>();
 
 const CLEANUP_INTERVAL = 5 * 60 * 1000;

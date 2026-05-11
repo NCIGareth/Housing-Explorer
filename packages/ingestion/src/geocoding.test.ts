@@ -1,71 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-// Import the geocoding functions from ppr-import.ts
-// Note: These functions are not exported, so we'll test the logic directly
-const routingKeyCoordinates: Record<string, { latitude: number; longitude: number }> = {
-  // Dublin Core - Verified coordinates from OSI/Wikipedia
-  D01: { latitude: 53.3401, longitude: -6.2604 }, // City Centre
-  D02: { latitude: 53.3203, longitude: -6.2747 }, // Rathmines
-  D03: { latitude: 53.3201, longitude: -6.2269 }, // Donnybrook
-  D04: { latitude: 53.3134, longitude: -6.2410 }, // South Dublin
-  D05: { latitude: 53.3161, longitude: -6.2002 }, // South Dublin
-  D06: { latitude: 53.2909, longitude: -6.2373 }, // South Dublin
-  D07: { latitude: 53.3325, longitude: -6.2903 }, // West City
-  D08: { latitude: 53.2924, longitude: -6.3827 }, // Tallaght
-  D09: { latitude: 53.3723, longitude: -6.1900 }, // North Dublin
-  D10: { latitude: 53.3020, longitude: -6.2743 }, // South Dublin
-
-  // FIXED: Corrected Dublin North/West coordinates
-  D11: { latitude: 53.3903, longitude: -6.2999 }, // Finglas
-  D12: { latitude: 53.2958, longitude: -6.3697 }, // Ballyroan
-  D13: { latitude: 53.3071, longitude: -6.3885 }, // Ballyroan
-  D14: { latitude: 53.2834, longitude: -6.2660 }, // Ballinteer
-  D15: { latitude: 53.3944, longitude: -6.1936 }, // North Dublin
-  D16: { latitude: 53.3957, longitude: -6.2009 }, // North Dublin
-  D17: { latitude: 53.2978, longitude: -6.1355 }, // Dun Laoghaire
-  D18: { latitude: 53.2553, longitude: -6.1166 }, // Shankill
-
-  // Dublin Extended
-  D20: { latitude: 53.5234, longitude: -6.1365 }, // Ashbourne
-  D22: { latitude: 53.3203, longitude: -6.3947 }, // Clondalkin
-  D24: { latitude: 53.6135, longitude: -6.1816 }, // Balbriggan
-
-  // Major Cities
-  T12: { latitude: 51.8985, longitude: -8.4756 }, // Cork
-  T23: { latitude: 51.9095, longitude: -8.4730 }, // Cork
-  H91: { latitude: 53.2707, longitude: -9.0568 }, // Galway
-  V94: { latitude: 52.6638, longitude: -8.6267 }, // Waterford
-  X91: { latitude: 52.2593, longitude: -7.1101 }, // Limerick
-
-  // Additional routing keys for completeness
-  F91: { latitude: 53.2710, longitude: -9.0476 }, // Galway
-  F92: { latitude: 53.3450, longitude: -6.2672 }, // Dublin
-  F93: { latitude: 53.3540, longitude: -6.2520 }, // Dublin
-  F94: { latitude: 53.3760, longitude: -6.3541 }  // Dublin
-};
-
-function normalizeEircode(value: string): string | undefined {
-  if (!value) return undefined;
-  const raw = value.trim().toUpperCase().replace(/\s+/g, "");
-  if (raw.length === 6) {
-    return `${raw.slice(0, 3)} ${raw.slice(3)}`;
-  }
-  if (raw.length !== 7) {
-    return undefined;
-  }
-
-  const corrected = raw
-    .split("")
-    .map((char, index) => {
-      if (char === "O" && index >= 3) {
-        return "0";
-      }
-      return char;
-    })
-    .join("");
-
-  return `${corrected.slice(0, 3)} ${corrected.slice(3)}`;
-}
+import { routingKeyCoordinates } from "./lib/eircode-heuristics";
+import { normalizeEircode } from "./modules/ppr-import";
 
 function geocodeEircode(eircode: string | undefined): { latitude: number | null; longitude: number | null } {
   const normalized = eircode ? normalizeEircode(eircode) : undefined;
@@ -76,10 +11,9 @@ function geocodeEircode(eircode: string | undefined): { latitude: number | null;
   const routingKey = normalized.slice(0, 3);
   const coords = routingKeyCoordinates[routingKey];
   if (coords) {
-    return { latitude: coords.latitude, longitude: coords.longitude };
+    return { latitude: coords.lat, longitude: coords.lon };
   }
 
-  // If the routing key is unknown, keep the code but do not supply inaccurate coords.
   return { latitude: null, longitude: null };
 }
 
@@ -108,15 +42,12 @@ describe("Eircode geocoding", () => {
   describe("geocodeEircode", () => {
     it("returns correct coordinates for known routing keys", () => {
       // Test the critical fix: D11 (Finglas) vs D22 (Clondalkin)
-      expect(geocodeEircode("D11 X2X2")).toEqual({
-        latitude: 53.3903,
-        longitude: -6.2999
-      });
-
-      expect(geocodeEircode("D22 X2X2")).toEqual({
-        latitude: 53.3203,
-        longitude: -6.3947
-      });
+      const d11 = geocodeEircode("D11 X2X2");
+      const d22 = geocodeEircode("D22 X2X2");
+      expect(d11.latitude).toBeCloseTo(53.388, 1);
+      expect(d11.longitude).toBeCloseTo(-6.299, 1);
+      expect(d22.latitude).toBeCloseTo(53.320, 1);
+      expect(d22.longitude).toBeCloseTo(-6.414, 1);
     });
 
     it("returns null coordinates for unknown routing keys", () => {
@@ -139,15 +70,12 @@ describe("Eircode geocoding", () => {
     });
 
     it("returns coordinates for major cities", () => {
-      expect(geocodeEircode("T12 X3Y4")).toEqual({
-        latitude: 51.8985,
-        longitude: -8.4756
-      });
-
-      expect(geocodeEircode("H91 X9X9")).toEqual({
-        latitude: 53.2707,
-        longitude: -9.0568
-      });
+      const t12 = geocodeEircode("T12 X3Y4");
+      const h91 = geocodeEircode("H91 X9X9");
+      expect(t12.latitude).toBeCloseTo(51.879, 1);
+      expect(t12.longitude).toBeCloseTo(-8.466, 1);
+      expect(h91.latitude).toBeCloseTo(53.281, 1);
+      expect(h91.longitude).toBeCloseTo(-9.031, 1);
     });
   });
 

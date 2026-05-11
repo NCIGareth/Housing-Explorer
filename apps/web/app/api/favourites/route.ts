@@ -1,11 +1,23 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/supabase/auth-utils";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const { prisma } = await import("@/lib/db");
   const user = await getAuthUser();
   if (!user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const propertyId = request.nextUrl.searchParams.get("propertyId");
+  if (propertyId) {
+    const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+    if (!dbUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    const item = await prisma.favouriteProperty.findUnique({
+      where: { userId_propertyId: { userId: dbUser.id, propertyId } },
+    });
+    return NextResponse.json({ saved: !!item });
   }
 
   const items = await prisma.favouriteProperty.findMany({

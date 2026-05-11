@@ -12,10 +12,8 @@ export function SavePropertyButton({ propertyId }: { propertyId: string }) {
 
   useEffect(() => {
     if (!user) return;
-    fetch("/api/favourites").then(r => r.json()).then(d => {
-      if (d.items?.some((f: { propertyId: string }) => f.propertyId === propertyId)) {
-        setSaved(true);
-      }
+    fetch(`/api/favourites?propertyId=${encodeURIComponent(propertyId)}`).then(r => r.json()).then(d => {
+      if (d.saved) setSaved(true);
     }).catch((e) => console.error("Failed to check saved property:", e));
   }, [user, propertyId]);
 

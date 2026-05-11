@@ -19,7 +19,7 @@ body {
   margin: 0;
   background: #f8fafc; /* Slate-50: Easier on the eyes for data analysis */
   color: #0f172a;
-  line-height: 1.5;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -79,13 +79,6 @@ input, select, button {
   height: 100%;
   min-height: 400px;
   background-color: #e2e8f0;
-}
-
-/* Add to globals.css */
-
-/* 1. Improve general readability across the app */
-body {
-  line-height: 1.6; /* Increased from 1.5 */
 }
 
 /* 2. Global Table Spacing */

@@ -1,5 +1,3 @@
-"use client";
-
 import { resolve } from "node:path";
 import * as dotenv from "dotenv";
 
@@ -98,7 +96,7 @@ function parseIrishDate(value: string): Date {
   return new Date(Date.UTC(Number(yyyy), Number(mm) - 1, Number(dd)));
 }
 
-function normalizeEircode(value: string): string | undefined {
+export function normalizeEircode(value: string): string | undefined {
   const raw = value.trim().toUpperCase().replace(/\s+/g, "");
   if (raw.length < 7) return undefined;
   const corrected = raw.split("").map((char, i) => (i >= 3 && char === "O" ? "0" : char)).join("");

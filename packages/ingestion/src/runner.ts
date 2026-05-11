@@ -75,7 +75,6 @@ async function runAllIngestion() {
 
 // 5. The "Brain" - Controls the sequence
 async function main() {
-  console.log('FINAL_ENV_VAL:', `|${process.env.DATABASE_URL}|`);
   // Dynamically import the database package ONLY after env is cleaned
   const db = await import("@housing/db");
   prisma = db.prisma;
