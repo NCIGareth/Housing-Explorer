@@ -37,6 +37,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = `€${sale.priceEur.toLocaleString()} - ${sale.address}, ${sale.county} | Ireland Housing Explorer`;
   const description = `${sale.descriptionOfProperty} sold for €${sale.priceEur.toLocaleString()} in ${sale.county} on ${sale.saleDate.toLocaleDateString("en-IE", { year: "numeric", month: "long", day: "numeric" })}. Search the full Property Price Register for sold prices in any Irish area.`;
 
+  const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "https://irelandhousingexplorer.com";
+
   return {
     title,
     description,
@@ -46,6 +52,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: "article",
       siteName: "Ireland Housing Explorer",
     },
+    alternates: { canonical: `${baseUrl}/sales/${sale.id}` },
   };
 }
 
@@ -60,6 +67,12 @@ export default async function PprSaleDetailPage({ params }: Props) {
   if (!sale) {
     notFound();
   }
+
+  const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "https://irelandhousingexplorer.com";
 
   const routingKey = (sale.eircode || sale.estimatedEircode)?.substring(0, 3);
 
@@ -88,6 +101,19 @@ export default async function PprSaleDetailPage({ params }: Props) {
 
   return (
     <main className="max-w-7xl mx-auto p-6 space-y-8 min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Explorer", item: baseUrl },
+              { "@type": "ListItem", position: 2, name: `${sale.address}, ${sale.county}`, item: `${baseUrl}/sales/${sale.id}` },
+            ],
+          }),
+        }}
+      />
       <nav className="flex items-center gap-2 text-sm text-slate-500 mb-4 transition-colors">
         <Link href="/" className="flex items-center gap-1.5 hover:text-blue-600 font-medium group">
           <span className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 group-hover:bg-blue-50 transition-colors">

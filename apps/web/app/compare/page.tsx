@@ -20,7 +20,13 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     ? `Compare median property prices across ${selected.join(", ")}. View CSO RPPI trends and PPR sales data side by side.`
     : "Compare median property price trends across Irish counties using official CSO and PPR data.";
 
-  return { title, description };
+  const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "https://irelandhousingexplorer.com";
+
+  return { title, description, alternates: { canonical: `${baseUrl}/compare` } };
 }
 
 async function CompareChartSection({ areas }: { areas: string }) {
