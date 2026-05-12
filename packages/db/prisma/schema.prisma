@@ -139,6 +139,18 @@ model PropertySale {
   // @@index([address], type: Gin) — created via raw SQL migration 20260510_add_trigram_index (pg_trgm GIN index)
 }
 
+model MedianPriceCache {
+  id          Int      @id @default(autoincrement())
+  county      String
+  period      String
+  value       Float
+  saleCount   Int
+  refreshedAt DateTime @default(now())
+
+  @@unique([county, period])
+  @@index([county])
+}
+
 model VerifiedEircodeMap {
   eircode String @id
   geom    Unsupported("geometry(Point, 4326)")

@@ -56,7 +56,14 @@ export function AreaSnapshot({ routingKey, medianPrice, volume, growthPercent, c
             </span>
           </span>
         </div>
-        <div className="h-1.5 w-full bg-slate-100 rounded-full mt-2 overflow-hidden">
+        <div
+          className="h-1.5 w-full bg-slate-100 rounded-full mt-2 overflow-hidden"
+          role="progressbar"
+          aria-valuenow={Math.min(Math.max(50 + (growthPercent || 0) * 2, 10), 100)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`Sentiment strength: ${isPositive ? 'Growth' : isNegative ? 'Cooling' : 'Stable'} market`}
+        >
           <div 
             className={`h-full rounded-full transition-all duration-1000 ${
               isPositive ? 'bg-emerald-500' : isNegative ? 'bg-rose-500' : 'bg-slate-400'

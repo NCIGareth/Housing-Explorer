@@ -101,6 +101,23 @@ export async function getPprMedianPriceByMonth(params: {
   if (isBuildPhase()) return [];
   const prisma = await getDb();
 
+  // Use pre-computed cache when no additional filters are applied
+  const useCache = !params.eircode && !params.locality && !params.propertyDescription &&
+    !params.startDate && !params.endDate && params.minPriceEur === undefined &&
+    params.maxPriceEur === undefined && params.notFullMarketPrice === undefined &&
+    params.vatExclusive === undefined;
+
+  if (useCache) {
+    const cached = await prisma.medianPriceCache.findMany({
+      where: { county: params.county },
+      orderBy: { period: "asc" },
+      select: { period: true, value: true },
+    });
+    if (cached.length > 0) {
+      return cached.map((c) => ({ period: c.period, value: c.value }));
+    }
+  }
+
   const whereClauses = [];
   
   // Always filter by county

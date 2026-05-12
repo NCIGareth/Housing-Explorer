@@ -61,13 +61,13 @@ export async function DashboardChartsSection({ params }: { params: FilterParams 
     console.warn("Failed to fetch chart data:", error);
   }
 
-  const useCso = historical && historical.length > 1;
-  const rawChartData = useCso ? historical : pprSeries;
+  const chartValid = historical && historical.length > 1;
+  const rawChartData = chartValid ? historical : pprSeries;
   const chartData = rawChartData.map((d) => ({
     period: d.period,
     value: Number(d.value) || 0,
   }));
-  const subtitle = useCso
+  const subtitle = chartValid
     ? "Showing CSO residential price index (Official Trends)."
     : "Showing median sale price from local Property Price Register data.";
 
