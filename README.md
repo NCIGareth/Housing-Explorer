@@ -44,6 +44,7 @@ The easiest way to populate the database is using the provided PowerShell runner
 
 - **Streaming Rendering**: Pages use React Suspense boundaries for progressive content delivery. ISR caching at 1-hour intervals.
 - **Database Indexing**: PropertySale indexed on `county`+`saleDate`, `saleDate`+`priceEur`, and `eircode`. Trigram and redundant composite indexes pruned for size (total DB: 374 MB).
+- **Median Price Cache**: Pre-computed monthly median prices by county in a dedicated table, avoiding expensive `percentile_cont` queries on every dashboard load.
 - **Monorepo**: Powered by `pnpm` and `turbo` for clean boundary management between `@housing/db`, `@housing/ingestion`, `@housing/shared`, and `apps/web`.
 
 ## Testing
