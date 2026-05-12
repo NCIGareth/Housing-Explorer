@@ -4,9 +4,31 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
+const siteName = "Ireland Housing Explorer";
+const siteDescription = "Explore 13 years of Irish Property Price Register sales with interactive maps, CSO price index charts, and area comparisons.";
+
 export const metadata: Metadata = {
-  title: "Ireland Housing Explorer",
-  description: "Cross-reference 13 years of Property Price Register sales with live market inventory.",
+  metadataBase: new URL(
+    process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : "https://irelandhousingexplorer.com"
+  ),
+  title: { default: siteName, template: `%s | ${siteName}` },
+  description: siteDescription,
+  openGraph: {
+    type: "website",
+    siteName,
+    title: siteName,
+    description: siteDescription,
+    locale: "en_IE",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteName,
+    description: siteDescription,
+  },
   verification: { google: "j21C3tQclgD2bzga7dAHwC-OWjcNUpbHY3g5NZQ2T2Y" },
 };
 
@@ -40,7 +62,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 : process.env.VERCEL_URL
                   ? `https://${process.env.VERCEL_URL}`
                   : "https://irelandhousingexplorer.com",
-              description: "Cross-reference 13 years of Property Price Register sales with live market inventory.",
+              description: siteDescription,
             }),
           }}
         />

@@ -1,4 +1,11 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "About",
+  description: "How Ireland Housing Explorer works: collecting PPR data, geocoding addresses, adding Eircodes, merging CSO statistics, and building interactive maps.",
+  alternates: { canonical: "/about" },
+};
 
 const steps = [
   {

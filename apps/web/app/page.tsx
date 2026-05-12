@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { FilterPanel } from "@/components/filter-panel";
 import { ExportButton } from "@/components/export-button";
 import {
@@ -30,6 +31,19 @@ type PageProps = {
     pageSize?: string;
   }>;
 };
+
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const params = await searchParams;
+  const county = params.county ?? "Dublin";
+
+  return {
+    title: county === "Dublin" ? undefined : `${county} Property Prices`,
+    description: `Explore ${county} property sale prices from the Property Price Register. Interactive map, price trends, and area comparisons for ${county}.`,
+    alternates: {
+      canonical: `/?county=${encodeURIComponent(county)}`,
+    },
+  };
+}
 
 export default async function Home({ searchParams }: PageProps) {
   const params = await searchParams;

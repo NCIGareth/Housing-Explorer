@@ -129,16 +129,16 @@ export default async function PprSaleDetailPage({ params }: Props) {
         <div className="flex-1 space-y-6">
           <header>
             <div className="flex items-center gap-3">
-              <h1 className="text-sm font-bold uppercase tracking-widest text-slate-400">Property Information Record</h1>
+              <span className="text-sm font-bold uppercase tracking-widest text-slate-400">Property Information Record</span>
               {sale.notFullMarketPrice && (
                 <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-2 py-0.5 rounded-full border border-amber-200 uppercase tracking-tighter">
                   ** Non-Market Transaction
                 </span>
               )}
             </div>
-            <h2 className="text-2xl font-bold mt-2 leading-tight" style={{ whiteSpace: "pre-wrap" }}>
+            <h1 className="text-2xl font-bold mt-2 leading-tight" style={{ whiteSpace: "pre-wrap" }}>
               {sale.address}
-            </h2>
+            </h1>
             <div className="flex items-baseline gap-2 mt-2">
               <span className="text-3xl font-black text-slate-900">
                 €{sale.priceEur.toLocaleString()}
