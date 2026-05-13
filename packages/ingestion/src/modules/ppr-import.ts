@@ -29,6 +29,7 @@ import { logError, logInfo } from "../lib/logger";
 import { estimateRoutingKey, routingKeyCoordinates } from "../lib/eircode-heuristics";
 import pLimit from "p-limit";
 import type { PrismaClient } from "@housing/db";
+import { refreshMedianPriceCache } from "../jobs/refresh-median-price-cache";
 
 const RETENTION_YEARS = 13;
 
@@ -375,6 +376,7 @@ async function runPprImportBatch(stream: AsyncIterable<PprCsvRow>, sourceName: s
   logInfo("PPR Import Complete", { rowsRead, rowsUpserted });
 
   await pruneOldPropertySales();
+  await refreshMedianPriceCache(prisma);
 }
 
 async function pruneOldPropertySales() {

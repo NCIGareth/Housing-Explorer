@@ -98,7 +98,7 @@ export async function SaleCrimeSection({ county, locality }: { county: string; l
       crimeStats = await getLocalCrimeStats(county);
     }
   } catch (error) {
-    console.warn("Failed to fetch crime data:", error);
+    console.error("Failed to fetch crime data:", error);
   }
   return <CrimeStatsGrid stats={crimeStats} county={label} />;
 }
@@ -108,7 +108,7 @@ export async function SaleAreaSection({ routingKey, county }: { routingKey: stri
   try {
     areaStats = await getSingleEircodeRoutingKeyStats(routingKey, county);
   } catch (error) {
-    console.warn("Failed to fetch area data:", error);
+    console.error("Failed to fetch area data:", error);
   }
   if (!areaStats) return null;
   return (

@@ -234,12 +234,22 @@ function buildPprFilterWhere(params: PprFilterParams) {
   };
 }
 
-/**
- * Advanced query for fetching recent Property Price Register transactions.
- * Supports filtering by county, eircode substring, price ranges, dates, and market conditions.
- * Ideal for populating the detailed sales table and map points.
- */
-export async function getRecentPprSales(params: {
+
+
+function getCacheKey(params: Record<string, unknown>): string {
+  const ordered: Record<string, unknown> = {};
+  for (const key of Object.keys(params).sort()) {
+    const v = params[key];
+    if (v !== undefined) ordered[key] = v;
+  }
+  return JSON.stringify(ordered);
+}
+
+const pprSalesCache = new Map<string, Promise<Prisma.PropertySaleGetPayload<object>[]>>();
+const PPR_CACHE_MAX = 50;
+const pprCacheKeys: string[] = [];
+
+type PprSalesParams = {
   county: string;
   eircode?: string;
   locality?: string;
@@ -252,29 +262,36 @@ export async function getRecentPprSales(params: {
   vatExclusive?: boolean;
   take?: number;
   skip?: number;
-}) {
-  if (isBuildPhase()) return [];
-  const prisma = await getDb();
+};
 
-  return prisma.propertySale.findMany({
+/**
+ * Fetches the most recent Property Price Register transactions matching the given filters.
+ * Ideal for populating the detailed sales table and map points.
+ */
+export async function getRecentPprSales(params: PprSalesParams) {
+  if (isBuildPhase()) return [];
+
+  const key = getCacheKey(params as Record<string, unknown>);
+  const existing = pprSalesCache.get(key);
+  if (existing) return existing;
+
+  const prisma = await getDb();
+  const promise = prisma.propertySale.findMany({
     where: buildPprFilterWhere(params),
     orderBy: { saleDate: "desc" },
     take: params.take ?? 100,
-    skip: params.skip ?? 0
+    skip: params.skip ?? 0,
   });
-}
 
-/**
- * Counts the total number of Property Price Register transactions matching the filters.
- * Used for pagination calculations.
- */
-export async function getPprSalesCount(params: PprFilterParams) {
-  if (isBuildPhase()) return 0;
-  const prisma = await getDb();
+  pprSalesCache.set(key, promise);
+  pprCacheKeys.push(key);
 
-  return prisma.propertySale.count({
-    where: buildPprFilterWhere(params)
-  });
+  if (pprCacheKeys.length > PPR_CACHE_MAX) {
+    const stale = pprCacheKeys.shift();
+    if (stale) pprSalesCache.delete(stale);
+  }
+
+  return promise;
 }
 
 /** Get all counties with sales data */

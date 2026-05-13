@@ -30,11 +30,13 @@ export default function ClientMapView({ pprPreview = [] }: ClientMapProps) {
       <div className="relative">
         <OpenLayersMap pprPreview={pprPreview} viewMode={viewMode} />
 
-        <div className="absolute top-2 right-2 z-10 flex gap-1 bg-white/90 rounded-lg shadow-sm border p-1">
+        <div className="absolute top-2 right-2 z-10 flex gap-1 bg-white/90 rounded-lg shadow-sm border p-1" role="group" aria-label="Map view mode">
           {VIEW_OPTIONS.map((opt) => (
             <button
               key={opt.mode}
               onClick={() => setViewMode(opt.mode)}
+              aria-pressed={viewMode === opt.mode}
+              aria-label={`${opt.label} view`}
               className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
                 viewMode === opt.mode
                   ? "bg-blue-600 text-white shadow-sm"

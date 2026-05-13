@@ -37,3 +37,8 @@ memory-bank/
 analysis_results.md
 .opencode/
 AGENTS.md
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+

@@ -17,7 +17,7 @@ export default async function RecentSaleStatus() {
       </span>
     );
   } catch (error) {
-    console.warn("Failed to fetch latest sale date for status bar:", error);
+    console.error("Failed to fetch latest sale date:", error);
     return null;
   }
 }

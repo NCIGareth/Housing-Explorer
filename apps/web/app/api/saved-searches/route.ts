@@ -39,7 +39,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { allowed } = checkRateLimit(`search:${user.email}`, 10);
+    const { allowed } = await checkRateLimit(`search:${user.email}`, 10);
     if (!allowed) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
@@ -69,7 +69,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { allowed } = checkRateLimit(`search:${user.email}`, 10);
+    const { allowed } = await checkRateLimit(`search:${user.email}`, 10);
     if (!allowed) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }

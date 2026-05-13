@@ -15,7 +15,9 @@
     "DISPATCH_CRON_SECRET",
     "CSO_BASE_URL",
     "VERCEL_URL",
-    "VERCEL_PROJECT_PRODUCTION_URL"
+    "VERCEL_PROJECT_PRODUCTION_URL",
+    "UPSTASH_REDIS_REST_URL",
+    "UPSTASH_REDIS_REST_TOKEN"
   ],
   "tasks": {
     "dev": {
@@ -38,6 +40,10 @@
     },
     "typecheck": {
       "dependsOn": ["^typecheck", "db:generate"]
+    },
+    "e2e": {
+      "dependsOn": ["build"],
+      "cache": false
     }
   }
 }

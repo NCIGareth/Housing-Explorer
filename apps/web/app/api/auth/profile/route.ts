@@ -17,7 +17,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { allowed } = checkRateLimit(`profile:${user.email}`, 5);
+    const { allowed } = await checkRateLimit(`profile:${user.email}`, 5);
     if (!allowed) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }

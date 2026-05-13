@@ -5,8 +5,9 @@ import { logInfo, logError } from "../lib/logger";
 dotenv.config({ path: resolve(process.cwd(), "../../.env") });
 dotenv.config({ path: resolve(process.cwd(), ".env") });
 
-export async function refreshMedianPriceCache() {
-  const { prisma } = await import("@housing/db");
+export async function refreshMedianPriceCache(prismaOverride?: any) {
+  const { prisma: prismaClient } = await import("@housing/db");
+  const prisma = prismaOverride ?? prismaClient;
 
   try {
     logInfo("median_cache_refresh_start");
@@ -34,8 +35,11 @@ export async function refreshMedianPriceCache() {
     logError("median_cache_refresh_failed", { error: String(e) });
     throw e;
   } finally {
-    await prisma.$disconnect();
+    if (!prismaOverride) await prisma.$disconnect();
   }
 }
 
-refreshMedianPriceCache();
+const isEntryPoint = process.argv[1]?.endsWith("refresh-median-price-cache.ts");
+if (isEntryPoint) {
+  refreshMedianPriceCache();
+}

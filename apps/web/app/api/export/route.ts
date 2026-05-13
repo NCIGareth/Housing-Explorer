@@ -15,7 +15,7 @@ export async function GET(req: Request) {
       || req.headers.get("x-real-ip")
       || "127.0.0.1";
 
-    const { allowed } = checkRateLimit(`export:${ip}`, 10, 60000);
+    const { allowed } = await checkRateLimit(`export:${ip}`, 10, 60000);
     if (!allowed) {
       return NextResponse.json(
         { error: "Too many requests" },
@@ -72,6 +72,7 @@ export async function GET(req: Request) {
       headers: {
         "Content-Type": "text/csv",
         "Content-Disposition": `attachment; filename="property-sales-${county || "all"}-${new Date().toISOString().split("T")[0]}.csv"`,
+        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
       },
     });
   } catch (error) {

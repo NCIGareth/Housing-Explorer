@@ -425,6 +425,7 @@ export const MarketMap: React.FC<{
       const closeBtn = document.createElement("button");
       closeBtn.className = "absolute top-2 right-2 h-6 w-6 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 transition-colors";
       closeBtn.innerHTML = "✕";
+      closeBtn.setAttribute("aria-label", "Close property popup");
       closeBtn.onclick = () => overlay.setPosition(undefined);
       root.appendChild(closeBtn);
       root.style.position = "relative";

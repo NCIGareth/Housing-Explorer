@@ -58,7 +58,7 @@ export async function DashboardChartsSection({ params }: { params: FilterParams 
       pprSeries = await getPprMedianPriceByMonth(qp);
     }
   } catch (error) {
-    console.warn("Failed to fetch chart data:", error);
+    console.error("Failed to fetch chart data:", error);
   }
 
   const chartValid = historical && historical.length > 1;
@@ -82,11 +82,12 @@ export async function DashboardMapSection({ params }: { params: FilterParams }) 
   try {
     pprSales = await getRecentPprSales({
       ...qp,
-      take: params.pageSize,
+      take: params.pageSize + 1,
       skip: (params.page - 1) * params.pageSize,
     });
+    pprSales = pprSales.slice(0, params.pageSize);
   } catch (error) {
-    console.warn("Failed to fetch map data:", error);
+    console.error("Failed to fetch map data:", error);
   }
 
   return (
@@ -113,7 +114,7 @@ export async function DashboardTableSection({ params, searchParams }: { params: 
       pprSales = pprSales.slice(0, params.pageSize);
     }
   } catch (error) {
-    console.warn("Failed to fetch table data:", error);
+    console.error("Failed to fetch table data:", error);
   }
 
   return (
@@ -141,7 +142,7 @@ export async function DashboardTrendSection() {
   try {
     csoNational = await getCsoMarketIndex("National - all residential properties");
   } catch (error) {
-    console.warn("Failed to fetch trend data:", error);
+    console.error("Failed to fetch trend data:", error);
   }
 
   if (!csoNational.length) {
