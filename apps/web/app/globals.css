@@ -81,13 +81,7 @@ input, select, button {
   background-color: #e2e8f0;
 }
 
-/* 2. Global Table Spacing */
-table {
-  border-spacing: 0;
-  border-collapse: separate; /* Allows for border-radius on rows if needed */
-}
-
-/* 3. Global Cell Padding (The "Breathing Room" fix) */
+/* 2. Global Cell Padding (The "Breathing Room" fix) */
 th, td {
   padding: 14px 16px !important; /* Forces more vertical space */
   vertical-align: middle;

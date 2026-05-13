@@ -17,10 +17,7 @@ if (-not $EnrichOnly) {
     }
 }
 
-# 2. Environment Setup
-$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"
-
-# 3. Optional: Truncate
+# 2. Optional: Truncate
 if ($Truncate) {
     Write-Host "Wiping existing PropertySale data..." -ForegroundColor Yellow
     pnpm db:truncate:ppr

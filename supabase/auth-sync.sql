@@ -44,7 +44,7 @@ begin
   -- Set dispatch_api_key to a shared secret in Supabase dashboard -> Settings -> Environment.
   -- The endpoint should accept ?key=<secret> for cron-triggered dispatches.
   perform extensions.net.http_post(
-    url := coalesce(current_setting('app.dispatch_url', true), 'https://housing-explorer.vercel.app/api/alerts/dispatch'),
+    url := current_setting('app.dispatch_url', true),
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
       'x-cron-secret', coalesce(current_setting('app.dispatch_api_key', true), '')

@@ -15,42 +15,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  sync:
-    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.full_reimport }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 360
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Generate Prisma client
-        run: pnpm db:generate
-
-      - name: Sync latest PPR monthly data
-        run: pnpm ingest:ppr -- --sync
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
-          NOMINATIM_URL: https://nominatim.openstreetmap.org
-
-      - name: Ingest CSO RPPI and crime data
-        run: pnpm ingest
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
-
-  full-reimport:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.full_reimport }}
+  ingest:
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
@@ -71,12 +36,17 @@ jobs:
         run: pnpm db:generate
 
       - name: Download and extract PPR-ALL.zip
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.full_reimport }}
         run: |
-          curl -k -L -o PPR-ALL.zip "https://www.propertypriceregister.ie/website/npsra/ppr/npsra-ppr.nsf/Downloads/PPR-ALL.zip/\$FILE/PPR-ALL.zip"
-          unzip -o PPR-ALL.zip
+          node scripts/download-ppr-all.mjs
 
-      - name: Full PPR re-import
-        run: pnpm ingest:ppr
+      - name: Import PPR data
+        run: |
+          if [ "${{ github.event_name == 'workflow_dispatch' && inputs.full_reimport }}" = "true" ]; then
+            pnpm ingest:ppr
+          else
+            pnpm ingest:ppr -- --sync
+          fi
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}

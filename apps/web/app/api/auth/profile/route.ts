@@ -4,6 +4,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 const profileSchema = z.object({
   name: z.string().min(1).max(100).optional(),
+  currentPassword: z.string().optional(),
   newPassword: z.string().min(6).max(128).optional(),
 });
 
@@ -26,6 +27,16 @@ export async function PATCH(req: Request) {
     const errors: string[] = [];
 
     if (body.newPassword) {
+      if (!body.currentPassword) {
+        return NextResponse.json({ error: "Current password is required to set a new password" }, { status: 400 });
+      }
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: user.email!,
+        password: body.currentPassword,
+      });
+      if (signInErr) {
+        return NextResponse.json({ error: "Current password is incorrect" }, { status: 403 });
+      }
       const { error: pwdErr } = await supabase.auth.updateUser({ password: body.newPassword });
       if (pwdErr) errors.push("Failed to update password");
     }

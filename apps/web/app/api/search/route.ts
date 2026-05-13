@@ -19,8 +19,11 @@ export async function GET(request: NextRequest) {
   }
 
   const q = (request.nextUrl.searchParams.get("q") || "").trim();
-  if (q.length < 2) {
-    return NextResponse.json({ error: "Query must be at least 2 characters" }, { status: 400 });
+  if (q.length < 2 || q.length > 200) {
+    return NextResponse.json({ error: "Query must be between 2 and 200 characters" }, { status: 400 });
+  }
+  if (/[<>"']/.test(q)) {
+    return NextResponse.json({ error: "Query contains invalid characters" }, { status: 400 });
   }
 
   try {

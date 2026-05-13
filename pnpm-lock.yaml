@@ -132,9 +132,6 @@ importers:
       tailwindcss:
         specifier: ^4.2.2
         version: 4.2.2
-      typescript:
-        specifier: ^5.6.3
-        version: 5.9.3
 
   packages/db:
     dependencies:
@@ -148,9 +145,6 @@ importers:
       prisma:
         specifier: ^5.20.0
         version: 5.22.0
-      typescript:
-        specifier: ^5.6.3
-        version: 5.9.3
       vitest:
         specifier: ^2.1.9
         version: 2.1.9(@types/node@22.19.17)(jsdom@29.0.1)(lightningcss@1.32.0)
@@ -179,9 +173,6 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
-      typescript:
-        specifier: ^5.6.3
-        version: 5.9.3
       vitest:
         specifier: ^2.1.9
         version: 2.1.9(@types/node@22.19.17)(jsdom@29.0.1)(lightningcss@1.32.0)
@@ -192,9 +183,6 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
-      typescript:
-        specifier: ^5.6.3
-        version: 5.9.3
       vitest:
         specifier: ^2.1.9
         version: 2.1.9(@types/node@22.19.17)(jsdom@29.0.1)(lightningcss@1.32.0)
