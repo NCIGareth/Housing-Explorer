@@ -36,7 +36,7 @@ The easiest way to populate the database is using the provided PowerShell runner
 - **Frontend**: Next.js 15 (App Router), Tailwind CSS v4, Recharts, OpenLayers.
 - **Data Layer**: Prisma ORM with **PostGIS** spatial extensions.
 - **Auth**: Supabase Auth (email/password) with `@supabase/ssr` for session management.
-- **Testing**: Jest (web), Vitest (packages). 154 total tests.
+- **Testing**: Jest (web), Vitest (packages), Playwright (E2E). 168 total tests + 7 E2E smoke tests.
 - **Ingestion**: Node.js/TSX workers with `p-limit` concurrency management.
 - **Geocoding**: Local Nominatim (Docker) integration for high-volume processing.
 

@@ -33,7 +33,8 @@ The ingestion pipeline enforces strict data cleaning:
 - **`@housing/shared`**: Vitest — focuses on Zod schema validation edge cases.
 - **`@housing/ingestion`**: Vitest — focuses on data quality, geocoding heuristics, and CSV column detection.
 - **`@housing/db`**: Vitest — Prisma client initialization verification.
-- **Total**: 154 tests across 9 test files.
+- **`@housing/web`**: 7 Playwright E2E smoke tests in `apps/web/e2e/` — covers homepage, API health, search, short query validation, map section, export link, and county filter. DB-dependent tests skip gracefully in CI.
+- **Total**: 168 unit/integration tests across 13 test files + 7 E2E smoke tests.
 
 ## 5. Authentication Layer
 

@@ -483,9 +483,18 @@ All endpoints may return the following error responses:
 
 ## Rate Limiting
 
-The search endpoint (`GET /api/search`) is rate limited to 30 requests per minute per IP address. Exceeded requests receive a `429 Too Many Requests` response with a `Retry-After: 60` header. The rate limiter uses an in-memory map with automatic stale-entry cleanup every 5 minutes.
+All rate limited endpoints use **Upstash Redis** (`@upstash/ratelimit`) on Vercel, falling back to an in-memory store in local development. Exceeded requests receive a `429 Too Many Requests` response with a `Retry-After` header.
 
-Other API endpoints are not currently rate limited.
+| Endpoint | Limit |
+|----------|-------|
+| `GET /api/search` | 30 req/min per IP |
+| `GET /api/export` | 10 req/min per IP |
+| `GET/POST/DELETE /api/alerts` | 10 req/user |
+| `GET/POST/DELETE /api/saved-searches` | 10 req/user |
+| `GET/POST/DELETE /api/favourites` | 10 req/user |
+| `PATCH /api/auth/profile` | 5 req/user |
+
+Other API endpoints (`/api/health`, `/api/alerts/dispatch`) are not rate limited.
 
 ## Versioning
 
