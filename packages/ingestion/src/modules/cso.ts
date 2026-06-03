@@ -22,7 +22,9 @@ type JsonStatResponse = {
 
 // In production, parse true CSO payloads. For scaffold, we keep a deterministic adapter shape.
 export async function fetchCsoMetrics(): Promise<CsoMetric[]> {
-  const response = await fetch("https://ws.cso.ie/public/api.restful/PxStat.Data.Cube_API.ReadDataset/HPM06/JSON-stat/2.0/en");
+  const response = await fetch("https://ws.cso.ie/public/api.restful/PxStat.Data.Cube_API.ReadDataset/HPM06/JSON-stat/2.0/en", {
+    headers: { "User-Agent": "IrelandHousingExplorer/1.0 (github.com/NCIGareth/Housing-Explorer)" }
+  });
   if (!response.ok) {
     throw new Error(`Failed to fetch CSO JSON-stat API: ${response.status} ${response.statusText}`);
   }
@@ -69,7 +71,9 @@ export async function fetchCsoMetrics(): Promise<CsoMetric[]> {
 
 // Fetches Recorded Crime Incidents by Garda Division (CJA07)
 export async function fetchCsoCrimeMetrics(): Promise<CsoMetric[]> {
-  const response = await fetch("https://ws.cso.ie/public/api.restful/PxStat.Data.Cube_API.ReadDataset/CJA07/JSON-stat/2.0/en");
+  const response = await fetch("https://ws.cso.ie/public/api.restful/PxStat.Data.Cube_API.ReadDataset/CJA07/JSON-stat/2.0/en", {
+    headers: { "User-Agent": "IrelandHousingExplorer/1.0 (github.com/NCIGareth/Housing-Explorer)" }
+  });
   if (!response.ok) {
     throw new Error(`Failed to fetch CSO JSON-stat Crime API: ${response.status} ${response.statusText}`);
   }
