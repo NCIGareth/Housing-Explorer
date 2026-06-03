@@ -315,8 +315,9 @@ function httpsGet(url: string): Promise<string> {
 
 export async function syncLatestPprMonthly() {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const year = prev.getFullYear();
+  const month = String(prev.getMonth() + 1).padStart(2, '0');
   const filename = `PPR-${year}-${month}.csv`;
   const url = `${PPR_DOWNLOAD_BASE}/${filename}/$FILE/${filename}`;
 
