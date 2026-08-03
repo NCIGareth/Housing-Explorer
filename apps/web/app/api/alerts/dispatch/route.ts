@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 
+export const maxDuration = 300;
+export const dynamic = "force-dynamic";
+
 export async function POST() {
   try {
     const { createClient } = await import("@/lib/supabase/server");
@@ -25,8 +28,11 @@ export async function POST() {
       include: { user: true, savedSearch: true },
     });
 
+    console.log(`Alert dispatch started: ${alerts.length} enabled alerts`);
+
     let sent = 0;
     const failed: Array<{ alertId: string; reason: string }> = [];
+    const skipped: string[] = [];
 
     for (const alert of alerts) {
       if (!alert.user.email || !alert.savedSearch) continue;
@@ -48,7 +54,12 @@ export async function POST() {
         take: 20,
       });
 
-      if (sales.length === 0) continue;
+      if (sales.length === 0) {
+        skipped.push(alert.id);
+        continue;
+      }
+
+      console.log(`Alert ${alert.id} (${alert.user.email}): ${sales.length} matching sale(s) since ${since.toISOString()}`);
 
       const lines = sales.map(s => {
         const size = s.propertySizeDescription ? ` (${s.propertySizeDescription})` : "";
@@ -76,12 +87,21 @@ export async function POST() {
           data: { lastTriggeredAt: new Date() },
         });
         sent++;
+        console.log(`Alert ${alert.id}: email sent`);
       } catch (err) {
-        failed.push({ alertId: alert.id, reason: err instanceof Error ? err.message : String(err) });
+        const reason = err instanceof Error ? err.message : String(err);
+        failed.push({ alertId: alert.id, reason });
+        console.error(`Alert ${alert.id}: email send failed`, err);
       }
     }
 
-    return NextResponse.json({ sent, failed: failed.length > 0 ? failed : undefined });
+    console.log(`Alert dispatch complete: sent=${sent}, failed=${failed.length}, skipped=${skipped.length}`);
+
+    return NextResponse.json({
+      sent,
+      failed: failed.length > 0 ? failed : undefined,
+      skipped: skipped.length > 0 ? skipped : undefined,
+    });
   } catch (error) {
     console.error("Alert dispatch failed:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
