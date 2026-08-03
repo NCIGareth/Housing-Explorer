@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
-import type { Prisma } from "@prisma/client";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { buildPprFilterWhere } from "@/lib/queries";
+import type { PprFilterParams } from "@/lib/queries";
+
+export const maxDuration = 60;
 
 function sanitizeCsvCell(value: string): string {
   if (/^[=+\-@]/.test(value)) {
@@ -29,24 +32,32 @@ export async function GET(req: Request) {
     const { prisma } = await import("@/lib/db");
 
     const url = new URL(req.url);
-    const county = url.searchParams.get("county");
-    const minPrice = url.searchParams.get("minPriceEur");
-    const maxPrice = url.searchParams.get("maxPriceEur");
-    const startDate = url.searchParams.get("startDate");
-    const endDate = url.searchParams.get("endDate");
+    const county = url.searchParams.get("county") ?? "Dublin";
 
-    const where: Prisma.PropertySaleWhereInput = {};
-    if (county) where.county = county;
-    if (minPrice || maxPrice) {
-      where.priceEur = {};
-      if (minPrice) where.priceEur.gte = parseInt(minPrice);
-      if (maxPrice) where.priceEur.lte = parseInt(maxPrice);
-    }
-    if (startDate || endDate) {
-      where.saleDate = {};
-      if (startDate) where.saleDate.gte = new Date(startDate);
-      if (endDate) where.saleDate.lte = new Date(endDate);
-    }
+    const minPriceRaw = url.searchParams.get("minPriceEur");
+    const maxPriceRaw = url.searchParams.get("maxPriceEur");
+    const startDateRaw = url.searchParams.get("startDate");
+    const endDateRaw = url.searchParams.get("endDate");
+
+    const params: PprFilterParams = { county };
+    if (minPriceRaw !== null && minPriceRaw !== "") params.minPriceEur = parseInt(minPriceRaw, 10);
+    if (maxPriceRaw !== null && maxPriceRaw !== "") params.maxPriceEur = parseInt(maxPriceRaw, 10);
+    if (startDateRaw) params.startDate = new Date(startDateRaw);
+    if (endDateRaw) params.endDate = new Date(endDateRaw);
+
+    const eircode = url.searchParams.get("eircode");
+    const locality = url.searchParams.get("locality");
+    const propertyType = url.searchParams.get("propertyType");
+    const notFullMarketPrice = url.searchParams.get("notFullMarketPrice") === "on";
+    const vatExclusive = url.searchParams.get("vatExclusive") === "on";
+
+    if (eircode) params.eircode = eircode;
+    if (locality) params.locality = locality;
+    if (propertyType) params.propertyDescription = propertyType;
+    if (notFullMarketPrice) params.notFullMarketPrice = true;
+    if (vatExclusive) params.vatExclusive = true;
+
+    const where = buildPprFilterWhere(params);
 
     const sales = await prisma.propertySale.findMany({
       where,

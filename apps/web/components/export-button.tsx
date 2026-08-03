@@ -6,19 +6,29 @@ export function ExportButton() {
   const searchParams = useSearchParams();
 
   const params = new URLSearchParams();
-  const county = searchParams.get("county");
+  const county = searchParams.get("county") ?? "Dublin";
+  const eircode = searchParams.get("eircode");
   const minPriceEur = searchParams.get("minPriceEur");
   const maxPriceEur = searchParams.get("maxPriceEur");
+  const propertyType = searchParams.get("propertyType");
   const startDate = searchParams.get("startDate");
   const endDate = searchParams.get("endDate");
+  const locality = searchParams.get("locality");
+  const notFullMarketPrice = searchParams.get("notFullMarketPrice");
+  const vatExclusive = searchParams.get("vatExclusive");
 
-  if (county) params.set("county", county);
+  params.set("county", county);
+  if (eircode) params.set("eircode", eircode);
   if (minPriceEur) params.set("minPriceEur", minPriceEur);
   if (maxPriceEur) params.set("maxPriceEur", maxPriceEur);
+  if (propertyType) params.set("propertyType", propertyType);
   if (startDate) params.set("startDate", startDate);
   if (endDate) params.set("endDate", endDate);
+  if (locality) params.set("locality", locality);
+  if (notFullMarketPrice) params.set("notFullMarketPrice", notFullMarketPrice);
+  if (vatExclusive) params.set("vatExclusive", vatExclusive);
 
-  const href = `/api/export${params.toString() ? `?${params.toString()}` : ""}`;
+  const href = `/api/export?${params.toString()}`;
 
   return (
     <a

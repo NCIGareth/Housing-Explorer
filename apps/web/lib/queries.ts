@@ -172,7 +172,7 @@ export async function getPprMedianPriceByMonth(params: {
   return result as Array<{ period: string; value: number }>;
 }
 
-type PprFilterParams = {
+export type PprFilterParams = {
   county: string;
   eircode?: string;
   locality?: string;
@@ -185,7 +185,7 @@ type PprFilterParams = {
   vatExclusive?: boolean;
 };
 
-function buildPprFilterWhere(params: PprFilterParams) {
+export function buildPprFilterWhere(params: PprFilterParams) {
   const eircodeFilter = params.eircode
     ? { eircode: { contains: params.eircode, mode: "insensitive" as const } }
     : {};
