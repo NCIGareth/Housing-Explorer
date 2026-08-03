@@ -69,7 +69,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <AuthProvider>
         <div className="min-h-screen flex flex-col">
           <Header />
-          <div className="bg-slate-50 border-b border-slate-100 py-1.5 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500">
+          <div className="bg-slate-50 border-b border-slate-100 py-1.5 px-4 text-[11px] font-black uppercase tracking-widest text-slate-500">
             <div className="max-w-7xl mx-auto flex items-center justify-between">
               <Suspense fallback={<span>Loading latest data...</span>}>
                 <RecentSaleStatus />

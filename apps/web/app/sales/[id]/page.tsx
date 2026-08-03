@@ -131,7 +131,7 @@ export default async function PprSaleDetailPage({ params }: Props) {
             <div className="flex items-center gap-3">
               <span className="text-sm font-bold uppercase tracking-widest text-slate-400">Property Information Record</span>
               {sale.notFullMarketPrice && (
-                <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-2 py-0.5 rounded-full border border-amber-200 uppercase tracking-tighter">
+                <span className="bg-amber-100 text-amber-700 text-[11px] font-black px-2 py-0.5 rounded-full border border-amber-200 uppercase tracking-tighter">
                   ** Non-Market Transaction
                 </span>
               )}
@@ -153,11 +153,11 @@ export default async function PprSaleDetailPage({ params }: Props) {
               <div className="mt-4 p-4 bg-blue-50/50 border border-blue-100 rounded-xl">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-[10px] font-bold text-blue-400 uppercase tracking-widest leading-none">VAT Inclusive Estimate</h4>
+                    <h4 className="text-[11px] font-bold text-blue-400 uppercase tracking-widest leading-none">VAT Inclusive Estimate</h4>
                     <p className="text-lg font-black text-blue-700 mt-1">€{vatInclusivePrice.toLocaleString()}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[9px] text-blue-500 font-medium leading-tight max-w-[120px]">
+                    <p className="text-[11px] text-blue-500 font-medium leading-tight max-w-[120px]">
                       Estimate based on official 13.5% VAT rate for new properties.
                     </p>
                   </div>
@@ -177,22 +177,22 @@ export default async function PprSaleDetailPage({ params }: Props) {
 
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm">
-              <span className="text-slate-400 block uppercase text-[10px] font-bold tracking-widest">Date of Sale</span>
+              <span className="text-slate-400 block uppercase text-[11px] font-bold tracking-widest">Date of Sale</span>
               <span className="font-bold text-slate-900">{sale.saleDate.toLocaleDateString("en-IE", { day: "2-digit", month: "long", year: "numeric" })}</span>
             </div>
             <div className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm">
-              <span className="text-slate-400 block uppercase text-[10px] font-bold tracking-widest">County</span>
+              <span className="text-slate-400 block uppercase text-[11px] font-bold tracking-widest">County</span>
               <span className="font-bold text-slate-900">{sale.county}</span>
             </div>
             <div className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm">
-              <span className="text-slate-400 block uppercase text-[10px] font-bold tracking-widest">Postal Code</span>
+              <span className="text-slate-400 block uppercase text-[11px] font-bold tracking-widest">Postal Code</span>
               <span className="font-bold text-slate-900">
                 {sale.eircode ? (
                   sale.eircode
                 ) : sale.estimatedEircode ? (
                   <span className="flex items-center gap-1.5">
                     {sale.estimatedEircode}
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md">
                       Estimated
                     </span>
                   </span>
@@ -232,7 +232,7 @@ export default async function PprSaleDetailPage({ params }: Props) {
                 <span className="text-xl" aria-hidden="true">🔍</span>
                 <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900">Deep Dive Research</h3>
               </div>
-              <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
+              <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
                 Search for floorplans, listing history, and location on external sites.
               </p>
 
@@ -253,7 +253,7 @@ export default async function PprSaleDetailPage({ params }: Props) {
             </div>
 
             <div className="bg-slate-900 p-5 rounded-2xl shadow-xl space-y-4">
-              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Sales History on Record</h3>
+              <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Sales History on Record</h3>
               <Suspense fallback={<SaleHistorySkeleton />}>
                 <SaleHistorySection sale={saleData} />
               </Suspense>
@@ -272,7 +272,7 @@ export default async function PprSaleDetailPage({ params }: Props) {
 
       <footer className="pt-12 border-t border-slate-100">
         <div className="bg-slate-50 rounded-2xl p-6 text-xs text-slate-500 leading-relaxed border border-slate-100">
-          <p className="font-bold text-slate-900 mb-2 uppercase tracking-widest text-[10px]">Registry Disclaimer</p>
+          <p className="font-bold text-slate-900 mb-2 uppercase tracking-widest text-[11px]">Registry Disclaimer</p>
           <p>
             The Residential Property Price Register is produced by the PSRA pursuant to section 86 of the Property Services (Regulation) Act 2011.
             It is based on details filed for stamp duty purposes. The Authority does not edit this data and is not responsible for errors.

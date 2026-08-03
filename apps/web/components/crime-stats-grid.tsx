@@ -15,8 +15,8 @@ export function CrimeStatsGrid({ stats, county }: CrimeStatsGridProps) {
     return (
       <div className="bg-slate-900 p-5 rounded-2xl shadow-xl space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Local Area Safety</h3>
-          <span className="text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
+          <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Local Area Safety</h3>
+          <span className="text-[11px] font-bold tracking-widest px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
             Official CSO
           </span>
         </div>
@@ -38,8 +38,8 @@ export function CrimeStatsGrid({ stats, county }: CrimeStatsGridProps) {
   return (
     <div className="bg-slate-900 p-5 rounded-2xl shadow-xl space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Local Area Safety</h3>
-        <span className="text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Local Area Safety</h3>
+        <span className="text-[11px] font-bold tracking-widest px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
           Official CSO
         </span>
       </div>
@@ -57,7 +57,7 @@ export function CrimeStatsGrid({ stats, county }: CrimeStatsGridProps) {
                 <span className="text-xs font-bold text-slate-200 truncate pr-4">
                   {cleanCategoryName(stat.category)}
                 </span>
-                <span className="text-[10px] font-black text-rose-400 tracking-wider">
+                <span className="text-[11px] font-black text-rose-400 tracking-wider">
                   {stat.incidents.toLocaleString()}
                 </span>
               </div>

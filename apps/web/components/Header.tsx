@@ -141,7 +141,7 @@ export default function Header() {
           {user && (
             <div className="text-xs text-slate-400">{user.email}</div>
           )}
-          <div className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">
+          <div className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-widest">
             {process.env.NEXT_PUBLIC_APP_VERSION || "dev"}
           </div>
         </div>

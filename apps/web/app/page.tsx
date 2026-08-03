@@ -2,6 +2,9 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { FilterPanel } from "@/components/filter-panel";
 import { ExportButton } from "@/components/export-button";
+import { SaveSearchButton } from "@/components/save-search-button";
+import { CopyLinkButton } from "@/components/copy-link-button";
+import { SearchBar } from "@/components/search-bar";
 import {
   DashboardChartsSection,
   DashboardMapSection,
@@ -82,9 +85,12 @@ export default async function Home({ searchParams }: PageProps) {
         <h1 className="text-2xl font-black text-slate-900 tracking-tight">
           Market Intelligence Dashboard
         </h1>
-        <p className="text-slate-500 text-sm flex items-center gap-2">
-          Exploring data for <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold uppercase text-[10px] tracking-wider">{county}</span>
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-slate-500 text-sm flex items-center gap-2">
+            Exploring data for <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold uppercase text-[11px] tracking-wider">{county}</span>
+          </p>
+          <CopyLinkButton />
+        </div>
       </div>
 
       <div className="text-center max-w-3xl mx-auto space-y-6">
@@ -95,6 +101,9 @@ export default async function Home({ searchParams }: PageProps) {
           Compare official CSO price indices with actual Property Price Register transactions.
           No asking prices. No estate agent spin. Just recorded sales.
         </p>
+        <div className="md:hidden flex justify-center">
+          <SearchBar className="w-full max-w-md" />
+        </div>
         <div className="flex flex-wrap gap-4 justify-center pt-2">
           <a href="#trend-section" className="flex flex-col items-center p-4 bg-blue-50/80 rounded-xl border border-blue-100 w-52 hover:bg-blue-100/80 transition-colors no-underline">
             <span className="text-2xl mb-1">📊</span>
@@ -128,7 +137,10 @@ export default async function Home({ searchParams }: PageProps) {
           vatExclusive={vatExclusive}
         />
 
-        <div className="flex justify-end">
+        <div className="flex flex-wrap justify-end gap-2">
+          <Suspense fallback={null}>
+            <SaveSearchButton />
+          </Suspense>
           <Suspense fallback={null}>
             <ExportButton />
           </Suspense>

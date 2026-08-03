@@ -356,7 +356,7 @@ export const MarketMap: React.FC<{
           const s1 = document.createElement("div");
           s1.className = "space-y-1";
           const badge = document.createElement("span");
-          badge.className = "inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-700";
+          badge.className = "inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-blue-100 text-blue-700";
           badge.textContent = "Area Overview";
           const h3 = document.createElement("h3");
           h3.className = "font-bold text-slate-900";
@@ -398,7 +398,7 @@ export const MarketMap: React.FC<{
       const s1 = document.createElement("div");
       s1.className = "space-y-1";
       const badge = document.createElement("span");
-      badge.className = "inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-700";
+      badge.className = "inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-red-100 text-red-700";
       badge.textContent = "Historical Sale";
       const h3 = document.createElement("h3");
       h3.className = "font-bold text-slate-900 leading-tight truncate";

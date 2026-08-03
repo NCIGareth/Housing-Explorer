@@ -43,10 +43,10 @@ test.describe("Smoke tests", () => {
     await expect(page.locator("#map-section")).toBeVisible({ timeout: 10000 });
   });
 
-  test("export link is present", async ({ page }) => {
+  test("export button is present", async ({ page }) => {
     await page.goto("/");
     await expect(
-      page.getByRole("link", { name: "Download search results as CSV" })
+      page.getByRole("button", { name: "Download search results as CSV" })
     ).toBeVisible({ timeout: 10000 });
   });
 

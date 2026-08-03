@@ -21,6 +21,7 @@ type AlertItem = {
   type: string;
   enabled: boolean;
   savedSearchId: string | null;
+  lastTriggeredAt?: string | null;
 };
 
 export default function AlertsPage() {
@@ -36,6 +37,8 @@ export default function AlertsPage() {
   const [formMaxPrice, setFormMaxPrice] = useState("");
   const [alertType, setAlertType] = useState("NEW_LISTING_MATCH");
   const [creating, setCreating] = useState(false);
+  const [testingId, setTestingId] = useState<string | null>(null);
+  const [testFeedback, setTestFeedback] = useState<Record<string, "sent" | "error">>({});
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/auth/signin");
@@ -96,6 +99,26 @@ export default function AlertsPage() {
       setSearches(s => s.filter(x => x.id !== id));
     } catch (err) {
       console.error("Failed to delete saved search:", err);
+    }
+  }
+
+  async function sendTestEmail(a: AlertItem, s: SavedSearch) {
+    setTestingId(a.id);
+    try {
+      const res = await fetch("/api/alerts", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          alertId: a.id,
+          previewMessage: `Test alert for: ${s.name}\n\nNew matching sales will be listed here monthly.`,
+        }),
+      });
+      if (!res.ok) throw new Error(`Failed to send test email: ${res.status}`);
+      setTestFeedback(prev => ({ ...prev, [a.id]: "sent" }));
+    } catch (err) {
+      console.error("Failed to send test email:", err);
+      setTestFeedback(prev => ({ ...prev, [a.id]: "error" }));
+    } finally {
+      setTestingId(null);
     }
   }
 
@@ -169,11 +192,31 @@ export default function AlertsPage() {
               {s.alerts.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
                   {s.alerts.map(a => (
-                    <div key={a.id} className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600">New property sales</span>
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${a.enabled ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                        {a.enabled ? "Active" : "Inactive"}
-                      </span>
+                    <div key={a.id} className="flex items-start justify-between text-sm gap-2">
+                      <div className="space-y-0.5">
+                        <span className="text-slate-600">New property sales</span>
+                        <p className="text-xs text-slate-400">
+                          {a.lastTriggeredAt
+                            ? `Last triggered: ${new Date(a.lastTriggeredAt).toLocaleDateString("en-IE", { day: "numeric", month: "short", year: "numeric" })}`
+                            : "Never triggered yet"}
+                        </p>
+                        {testFeedback[a.id] === "sent" && <p className="text-xs text-emerald-600">Test sent</p>}
+                        {testFeedback[a.id] === "error" && <p className="text-xs text-rose-600">Couldn&apos;t send test email</p>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {a.enabled && (
+                          <button
+                            onClick={() => sendTestEmail(a, s)}
+                            disabled={testingId === a.id}
+                            className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50 transition-colors"
+                          >
+                            {testingId === a.id ? "Sending…" : "Send test email"}
+                          </button>
+                        )}
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${a.enabled ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                          {a.enabled ? "Active" : "Inactive"}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>

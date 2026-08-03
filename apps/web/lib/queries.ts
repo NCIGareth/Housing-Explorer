@@ -294,6 +294,15 @@ export async function getRecentPprSales(params: PprSalesParams) {
   return promise;
 }
 
+/** Counts PPR transactions matching the given filters (ignores take/skip). */
+export async function getPprSaleCount(params: PprFilterParams) {
+  if (isBuildPhase()) return 0;
+  const prisma = await getDb();
+  return prisma.propertySale.count({
+    where: buildPprFilterWhere(params),
+  });
+}
+
 /** Get all counties with sales data */
 export async function getCounties() {
   if (isBuildPhase()) return [];

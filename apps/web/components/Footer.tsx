@@ -59,19 +59,19 @@ export default function Footer() {
         
         <div className="mt-16 border-t border-slate-200 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex flex-col gap-1">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
               © {new Date().getFullYear()} Ireland Housing Explorer
             </p>
-            <p className="text-[10px] text-slate-400">
+            <p className="text-[11px] text-slate-400">
                Information provided is based on public records. Not an official &ldquo;Property Price Index&rdquo;.
             </p>
           </div>
           <div className="flex items-center gap-6">
-            <Link href="https://www.propertypriceregister.ie" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-blue-600 transition-colors uppercase">
+            <Link href="https://www.propertypriceregister.ie" target="_blank" rel="noopener noreferrer" className="text-[11px] font-bold text-slate-400 hover:text-blue-600 transition-colors uppercase">
               Official Register
             </Link>
             <div className="h-4 w-px bg-slate-200"></div>
-            <Link href="mailto:info@psr.ie" className="text-[10px] font-bold text-slate-400 hover:text-blue-600 transition-colors uppercase">
+            <Link href="mailto:info@psr.ie" className="text-[11px] font-bold text-slate-400 hover:text-blue-600 transition-colors uppercase">
               Contact PSRA
             </Link>
           </div>

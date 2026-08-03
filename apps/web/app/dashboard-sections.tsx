@@ -6,6 +6,7 @@ import {
   getHistoricalSeries,
   getPprMedianPriceByMonth,
   getRecentPprSales,
+  getPprSaleCount,
   getCsoMarketIndex,
 } from "@/lib/queries";
 
@@ -45,11 +46,20 @@ function Skeleton({ className = "" }: { className?: string }) {
   );
 }
 
+function SectionError({ children }: { children: string }) {
+  return (
+    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs text-slate-500">
+      {children}
+    </div>
+  );
+}
+
 export async function DashboardChartsSection({ params }: { params: FilterParams }) {
   const qp = buildQueryParams(params);
 
   let historical: Awaited<ReturnType<typeof getHistoricalSeries>> = [];
   let pprSeries: Awaited<ReturnType<typeof getPprMedianPriceByMonth>> = [];
+  let error = false;
 
   try {
     historical = await getHistoricalSeries(params.county);
@@ -57,8 +67,13 @@ export async function DashboardChartsSection({ params }: { params: FilterParams 
     if (!useCso) {
       pprSeries = await getPprMedianPriceByMonth(qp);
     }
-  } catch (error) {
-    console.error("Failed to fetch chart data:", error);
+  } catch (e) {
+    error = true;
+    console.error("Failed to fetch chart data:", e);
+  }
+
+  if (error) {
+    return <SectionError>Couldn&apos;t load price trends — please try again.</SectionError>;
   }
 
   const chartValid = historical && historical.length > 1;
@@ -78,6 +93,7 @@ export async function DashboardMapSection({ params }: { params: FilterParams }) 
   const qp = buildQueryParams(params);
 
   let pprSales: Awaited<ReturnType<typeof getRecentPprSales>> = [];
+  let error = false;
 
   try {
     pprSales = await getRecentPprSales({
@@ -86,8 +102,13 @@ export async function DashboardMapSection({ params }: { params: FilterParams }) 
       skip: (params.page - 1) * params.pageSize,
     });
     pprSales = pprSales.slice(0, params.pageSize);
-  } catch (error) {
-    console.error("Failed to fetch map data:", error);
+  } catch (e) {
+    error = true;
+    console.error("Failed to fetch map data:", e);
+  }
+
+  if (error) {
+    return <SectionError>Couldn&apos;t load the map — please try again.</SectionError>;
   }
 
   return (
@@ -102,6 +123,8 @@ export async function DashboardTableSection({ params, searchParams }: { params: 
 
   let pprSales: Awaited<ReturnType<typeof getRecentPprSales>> = [];
   let hasNextPage = false;
+  let totalCount = 0;
+  let error = false;
 
   try {
     pprSales = await getRecentPprSales({
@@ -113,8 +136,15 @@ export async function DashboardTableSection({ params, searchParams }: { params: 
       hasNextPage = true;
       pprSales = pprSales.slice(0, params.pageSize);
     }
-  } catch (error) {
-    console.error("Failed to fetch table data:", error);
+  } catch (e) {
+    error = true;
+    console.error("Failed to fetch table data:", e);
+  }
+
+  try {
+    totalCount = await getPprSaleCount(qp);
+  } catch (e) {
+    console.error("Failed to fetch total count:", e);
   }
 
   return (
@@ -124,13 +154,18 @@ export async function DashboardTableSection({ params, searchParams }: { params: 
         Recent PPR Transactions
       </h2>
       <div className="border rounded-xl bg-white shadow-sm">
-        <PprSalesTable
-          sales={pprSales}
-          currentPage={params.page}
-          pageSize={params.pageSize}
-          hasNextPage={hasNextPage}
-          searchParams={searchParams}
-        />
+        {error ? (
+          <SectionError>Couldn&apos;t load sales data — please try again.</SectionError>
+        ) : (
+          <PprSalesTable
+            sales={pprSales}
+            currentPage={params.page}
+            pageSize={params.pageSize}
+            hasNextPage={hasNextPage}
+            totalCount={totalCount}
+            searchParams={searchParams}
+          />
+        )}
       </div>
     </section>
   );

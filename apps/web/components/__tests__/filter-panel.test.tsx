@@ -2,6 +2,10 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { FilterPanel } from '../filter-panel'
 
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: jest.fn() }),
+}))
+
 describe('FilterPanel', () => {
   it('renders search filters form', () => {
     render(<FilterPanel />)

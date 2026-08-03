@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useTransition, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type Props = {
   county?: string;
@@ -65,6 +66,23 @@ export const FilterPanel = React.memo(function FilterPanel({
   const [minPrice, setMinPrice] = useState(minPriceEur?.toString() ?? "");
   const [maxPrice, setMaxPrice] = useState(maxPriceEur?.toString() ?? "");
   const [activePreset, setActivePreset] = useState<string | null>(null);
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const params = new URLSearchParams();
+    for (const [key, value] of formData.entries()) {
+      if (typeof value === "string" && value.trim() !== "") {
+        params.set(key, value);
+      }
+    }
+    const qs = params.toString();
+    startTransition(() => {
+      router.push(qs ? `/?${qs}` : "/");
+    });
+  }
 
   function handlePresetClick(label: string, min: number | "", max: number | string) {
     setActivePreset(label);
@@ -95,7 +113,7 @@ export const FilterPanel = React.memo(function FilterPanel({
         <Link href="/" style={{ fontSize: "12px", color: "#2563eb", textDecoration: "none" }}>Reset</Link>
       </div>
 
-      <form method="get" action="/" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      <form method="get" action="/" onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
         
         {/* Main Grid */}
         <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
@@ -229,6 +247,7 @@ export const FilterPanel = React.memo(function FilterPanel({
 
         <button
           type="submit"
+          disabled={isPending}
           style={{
             width: "100%",
             padding: "14px",
@@ -239,10 +258,11 @@ export const FilterPanel = React.memo(function FilterPanel({
             fontSize: "14px",
             fontWeight: 700,
             cursor: "pointer",
-            boxShadow: "0 4px 6px -1px rgba(37, 99, 235, 0.2)"
+            boxShadow: "0 4px 6px -1px rgba(37, 99, 235, 0.2)",
+            opacity: isPending ? 0.7 : 1
           }}
         >
-          Update Explorer
+          {isPending ? "Updating…" : "Update Explorer"}
         </button>
       </form>
     </section>

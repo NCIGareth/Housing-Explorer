@@ -17,10 +17,10 @@ export function AreaSnapshot({ routingKey, medianPrice, volume, growthPercent, c
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-xl" aria-hidden="true">📊</span>
-          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900">Area Snapshot: {routingKey}</h3>
+          <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">Area Snapshot: {routingKey}</h3>
         </div>
         {growthPercent !== null && (
-          <span className={`text-[10px] font-bold px-2 py-1 rounded-full border ${
+          <span className={`text-[11px] font-bold px-2 py-1 rounded-full border ${
             isPositive ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 
             isNegative ? 'bg-rose-50 text-rose-700 border-rose-100' : 
             'bg-slate-50 text-slate-600 border-slate-100'
@@ -32,23 +32,23 @@ export function AreaSnapshot({ routingKey, medianPrice, volume, growthPercent, c
         )}
       </div>
 
-      <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
+      <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
         Market performance for the <strong>{routingKey}</strong> routing key over the last 12 months.
       </p>
 
       <div className="grid grid-cols-2 gap-3 pt-2">
         <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Median Price</span>
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Median Price</span>
           <span className="text-sm font-black text-slate-900">€{medianPrice.toLocaleString()}</span>
         </div>
         <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">12m Volume</span>
-          <span className="text-sm font-black text-slate-900">{volume.toLocaleString()} <span className="text-[10px] font-normal text-slate-400">Sales</span></span>
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">12m Volume</span>
+          <span className="text-sm font-black text-slate-900">{volume.toLocaleString()} <span className="text-[11px] font-normal text-slate-400">Sales</span></span>
         </div>
       </div>
 
       <div className="pt-2">
-        <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
+        <div className="flex items-center justify-between text-[11px] text-slate-400 font-bold uppercase tracking-tighter">
           <span>Market Sentiment</span>
           <span className={isPositive ? 'text-emerald-600' : isNegative ? 'text-rose-600' : 'text-slate-600'}>
             <span aria-label={`Market sentiment: ${isPositive ? 'Growth Phase' : isNegative ? 'Cooling' : 'Stable'} (${isPositive ? 'increasing' : isNegative ? 'decreasing' : 'stable'} prices)`}>
@@ -76,7 +76,7 @@ export function AreaSnapshot({ routingKey, medianPrice, volume, growthPercent, c
       {county && (
         <a
           href={`/compare?areas=${encodeURIComponent(county)}`}
-          className="block text-center text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wider pt-1 transition-colors"
+          className="block text-center text-[11px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wider pt-1 transition-colors"
         >
           Compare with other areas →
         </a>

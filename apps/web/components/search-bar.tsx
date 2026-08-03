@@ -12,12 +12,17 @@ type SearchSuggestion = {
   saleDate: string;
 };
 
-export function SearchBar() {
+type SearchBarProps = {
+  className?: string;
+};
+
+export function SearchBar({ className }: SearchBarProps) {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [noResults, setNoResults] = useState(false);
   const router = useRouter();
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -28,10 +33,12 @@ export function SearchBar() {
       setSuggestions([]);
       setIsOpen(false);
       setSelectedIndex(-1);
+      setNoResults(false);
       return;
     }
 
     setLoading(true);
+    setNoResults(false);
     clearTimeout(debounceRef.current);
     const mounted = { current: true };
     debounceRef.current = setTimeout(async () => {
@@ -62,6 +69,7 @@ export function SearchBar() {
 
   const navigate = (suggestion: SearchSuggestion) => {
     setIsOpen(false);
+    setNoResults(false);
     setQuery("");
     inputRef.current?.blur();
     if (suggestion.eircode) {
@@ -73,16 +81,20 @@ export function SearchBar() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsOpen(false);
-    inputRef.current?.blur();
     if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
       navigate(suggestions[selectedIndex]);
       return;
     }
-    if (query.trim()) {
-      router.push(`/?eircode=${encodeURIComponent(query.trim())}`);
-      setQuery("");
+    if (suggestions.length > 0) {
+      navigate(suggestions[0]);
+      return;
     }
+    if (query.trim()) {
+      setIsOpen(true);
+      setNoResults(true);
+      return;
+    }
+    setIsOpen(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -96,6 +108,7 @@ export function SearchBar() {
     } else if (e.key === "Escape") {
       setIsOpen(false);
       setSelectedIndex(-1);
+      setNoResults(false);
     }
   };
 
@@ -108,6 +121,7 @@ export function SearchBar() {
         !inputRef.current.contains(e.target as Node)
       ) {
         setIsOpen(false);
+        setNoResults(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -137,7 +151,14 @@ export function SearchBar() {
         onKeyDown={handleKeyDown}
         onFocus={() => { if (suggestions.length > 0) setIsOpen(true); }}
         placeholder="Search address, eircode..."
-        className="w-64 pl-9 pr-3 py-1.5 text-sm rounded-lg border border-slate-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-slate-400"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={isOpen}
+        aria-controls="search-suggestions"
+        aria-activedescendant={
+          isOpen && selectedIndex >= 0 ? `search-suggestion-${selectedIndex}` : undefined
+        }
+        className={`w-64 pl-9 pr-3 py-1.5 text-sm rounded-lg border border-slate-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-slate-400 ${className ?? ""}`}
       />
       <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -146,6 +167,8 @@ export function SearchBar() {
       {isOpen && (
         <div
           ref={listRef}
+          role="listbox"
+          id="search-suggestions"
           className="absolute top-full mt-1 left-0 right-0 bg-white rounded-lg shadow-xl border border-slate-200 max-h-80 overflow-y-auto z-50"
         >
           {loading && (
@@ -158,6 +181,9 @@ export function SearchBar() {
             <button
               key={s.id}
               type="button"
+              role="option"
+              id={`search-suggestion-${i}`}
+              aria-selected={i === selectedIndex}
               onMouseDown={(e) => { e.preventDefault(); navigate(s); }}
               className={`w-full text-left px-3 py-2.5 text-sm border-b border-slate-100 last:border-0 transition-colors ${
                 i === selectedIndex ? "bg-blue-50" : "hover:bg-slate-50"
@@ -171,6 +197,11 @@ export function SearchBar() {
               </span>
             </button>
           ))}
+          {noResults && !loading && (
+            <div className="px-3 py-2 text-sm text-slate-500">
+              No matches for &lsquo;{query}&rsquo;. Try a different address or eircode.
+            </div>
+          )}
         </div>
       )}
     </form>
