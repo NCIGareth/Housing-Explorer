@@ -1,0 +1,63 @@
+# Git
+.git
+.gitignore
+.github
+
+# Environment / secrets (keep .env.example for the build)
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules
+**/node_modules
+*.tsbuildinfo
+.pnpm-debug.log*
+
+# Build / cache
+.turbo
+**/.turbo
+.next
+**/.next
+out
+build
+dist
+coverage
+*.log
+
+# Tests (not needed in the production image)
+test-results
+playwright-report
+playwright/.cache
+**/__tests__
+**/e2e
+jest.config.*
+playwright.config.*
+
+# Large datasets
+PPR-ALL.csv
+PPR-ALL.zip
+*.zip
+*.csv
+*.osm.pbf
+nominatim-*
+
+# Agent / analysis artifacts
+AGENTS.md
+analysis_results.md
+geocoding-problem.md
+vercel-supabase-problem.md
+memory-bank
+.opencode
+.clinerules
+.clineignore
+.cursorrules
+.continue
+
+# Local tooling / one-off scripts
+docker-compose.yml
+docker-compose.nominatim.yml
+docker-compose.prod.yml
+truncate.sql
+temp-*.mjs
+scripts/test-eircode.mjs

@@ -30,10 +30,15 @@ async function download(url, dest) {
 function extractZip(zipPath, csvPath) {
   console.log("Extracting PPR-ALL.zip...");
   return new Promise((resolve, reject) => {
-    const proc = spawn("tar", ["-xf", zipPath, "-C", repoRoot]);
+    const onWindows = process.platform === "win32";
+    const bin = onWindows ? "tar" : "unzip";
+    const args = onWindows
+      ? ["-xf", zipPath, "-C", repoRoot]
+      : ["-o", zipPath, "-d", repoRoot];
+    const proc = spawn(bin, args);
     proc.on("exit", (code) => {
       if (code === 0) resolve();
-      else reject(new Error(`tar exited with code ${code}`));
+      else reject(new Error(`${bin} exited with code ${code}`));
     });
     proc.on("error", reject);
   });

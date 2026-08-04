@@ -199,15 +199,40 @@ async function fetchCoordinates(eircode?: string, address?: string, county?: str
     }
 
     if (!result.lat && address) {
-      if (isPublicApi) {
-        const elapsed = Date.now() - lastGeocodeRequest;
-        if (elapsed < 1100) await new Promise(r => setTimeout(r, 1100 - elapsed));
+      const parts = address.split(",").map((p) => p.trim()).filter(Boolean);
+      const street = parts[0] ?? "";
+      const city = parts.length > 1 ? parts.slice(1).join(", ") : "";
+
+      // Level 1: structured query (more deterministic than free-form q=)
+      if (street) {
+        if (isPublicApi) {
+          const elapsed = Date.now() - lastGeocodeRequest;
+          if (elapsed < 1100) await new Promise(r => setTimeout(r, 1100 - elapsed));
+        }
+        const sp = new URLSearchParams({ format: "jsonv2", limit: "1", countrycodes: "ie", layer: "address" });
+        sp.set("street", street);
+        if (city) sp.set("city", city);
+        if (county) sp.set("county", county);
+        const sres = await fetch(`${NOMINATIM_URL}/search?${sp}`, { headers });
+        lastGeocodeRequest = Date.now();
+        const sdata = await sres.json() as NominatimResult[];
+        if (sdata.length > 0) {
+          result = { lat: parseFloat(sdata[0].lat), lon: parseFloat(sdata[0].lon), precision: 'EXACT' };
+        }
       }
-      const res = await fetch(`${NOMINATIM_URL}/search?q=${encodeURIComponent(`${address}, ${county}, Ireland`)}&format=json&limit=1`, { headers });
-      lastGeocodeRequest = Date.now();
-      const data = await res.json() as NominatimResult[];
-      if (data.length > 0) {
-        result = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), precision: 'EXACT' };
+
+      // Level 2: free-form fallback
+      if (!result.lat) {
+        if (isPublicApi) {
+          const elapsed = Date.now() - lastGeocodeRequest;
+          if (elapsed < 1100) await new Promise(r => setTimeout(r, 1100 - elapsed));
+        }
+        const res = await fetch(`${NOMINATIM_URL}/search?q=${encodeURIComponent(`${address}, ${county}, Ireland`)}&format=json&limit=1`, { headers });
+        lastGeocodeRequest = Date.now();
+        const data = await res.json() as NominatimResult[];
+        if (data.length > 0) {
+          result = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), precision: 'EXACT' };
+        }
       }
     }
   } catch (e) {

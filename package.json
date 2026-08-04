@@ -17,6 +17,7 @@
     "db:truncate:ppr": "node scripts/prisma-with-env.mjs db execute --schema prisma/schema.prisma -- \"TRUNCATE TABLE \\\"PropertySale\\\" RESTART IDENTITY CASCADE;\"",
     "ingest:ppr": "node scripts/run-with-root-env.mjs pnpm --filter @housing/ingestion run ppr:import --",
     "ingest:enrich": "pnpm --filter @housing/ingestion ppr:enrich:eircodes && pnpm --filter @housing/ingestion ppr:enrich:coords",
+    "ingest:regeocode": "pnpm --filter @housing/ingestion ppr:regeocode",
     "ingest:sync": "pnpm ingest:ppr -- --sync && pnpm ingest:enrich",
     "db:reimport:ppr": "pnpm db:download:ppr && pnpm db:truncate:ppr && pnpm ingest:ppr --since 2014 && pnpm ingest:enrich",
     "ingest:full": "pnpm ingest && pnpm ingest:ppr && pnpm ingest:enrich",

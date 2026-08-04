@@ -1,23 +1,39 @@
-FROM node:24-alpine AS base
+# ---------- Dependencies ----------
+FROM node:24-bookworm-slim AS deps
 WORKDIR /app
-
-FROM base AS deps
-COPY package.json pnpm-workspace.yaml turbo.json ./
+RUN apt-get update && apt-get install -y --no-install-recommends openssl unzip && rm -rf /var/lib/apt/lists/*
+RUN npm install -g pnpm@10.0.0
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml turbo.json ./
 COPY apps/web/package.json apps/web/package.json
 COPY packages/db/package.json packages/db/package.json
 COPY packages/ingestion/package.json packages/ingestion/package.json
 COPY packages/shared/package.json packages/shared/package.json
-RUN corepack enable && corepack prepare pnpm@10.0.0 --activate && pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
+# ---------- Build ----------
 FROM deps AS build
+# NEXT_PUBLIC_* are inlined into the client bundle at build time
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG NEXT_PUBLIC_APP_VERSION
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY \
+    NEXT_PUBLIC_APP_VERSION=$NEXT_PUBLIC_APP_VERSION
 COPY . .
+RUN pnpm --filter @housing/db db:generate
 RUN pnpm --filter @housing/web build
 
-FROM node:24-alpine AS runner
+# ---------- Runtime ----------
+FROM node:24-bookworm-slim AS runner
 WORKDIR /app
-ENV NODE_ENV=production
-COPY --from=build /app/apps/web/.next ./.next
-COPY --from=build /app/apps/web/public ./public
-COPY --from=build /app/apps/web/package.json ./package.json
+ENV NODE_ENV=production \
+    PORT=3000 \
+    HOSTNAME=0.0.0.0
+RUN groupadd --system --gid 1001 nodejs && useradd --system --uid 1001 --gid nodejs nextjs
+RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
+COPY --from=build --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+COPY --from=build --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=build --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
+USER nextjs
 EXPOSE 3000
-CMD ["node_modules/.bin/next", "start"]
+CMD ["node", "apps/web/server.js"]

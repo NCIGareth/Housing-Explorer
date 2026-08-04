@@ -24,12 +24,21 @@ if (!process.env.DATABASE_URL) {
 }
 
 const nextConfig = {
+  output: "standalone",
   transpilePackages: ["@housing/db", "@housing/shared"],
   experimental: {
     optimizePackageImports: ["recharts", "ol"],
   },
   logging: {
     fetches: { fullUrl: true },
+  },
+  // Prisma's generated client lives in node_modules/.prisma — Next's tracer
+  // sometimes misses it for standalone output, so force-include it.
+  outputFileTracingIncludes: {
+    "/**": [
+      "../../node_modules/.prisma/client/**/*",
+      "../db/node_modules/.prisma/client/**/*",
+    ],
   },
 };
 
