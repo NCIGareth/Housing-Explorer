@@ -70,27 +70,41 @@ async function geocodeRow(address: string, county: string, viewbox?: string): Pr
   const { street, city } = splitAddress(address);
   let result = { lat: null as number | null, lon: null as number | null };
 
-  // Level 1: structured query (deterministic, documented as better than free-form q=)
+  const withViewbox = (p: URLSearchParams) => {
+    if (viewbox) {
+      p.set("viewbox", viewbox);
+      p.set("bounded", "1");
+    }
+    return p;
+  };
+
+  // Level 1: structured query (street addresses)
   if (street) {
-    const p = new URLSearchParams({ format: "jsonv2", limit: "1", countrycodes: "ie", layer: "address" });
+    const p = withViewbox(new URLSearchParams({ format: "jsonv2", limit: "1", countrycodes: "ie", layer: "address" }));
     p.set("street", street);
     if (city) p.set("city", city);
     p.set("county", county);
-    if (viewbox) {
-      p.set("viewbox", viewbox);
-      p.set("bounded", "1");
-    }
     result = (await attemptSearch(p)) ?? result;
   }
 
-  // Level 2: free-form fallback (previous behaviour)
+  // Level 2: free-form full address (no layer restriction - townlands are excluded from layer=address)
   if (!result.lat) {
-    const p = new URLSearchParams({ format: "jsonv2", limit: "1", countrycodes: "ie", layer: "address" });
+    const p = withViewbox(new URLSearchParams({ format: "jsonv2", limit: "1", countrycodes: "ie" }));
     p.set("q", `${address}, ${county}, Ireland`);
-    if (viewbox) {
-      p.set("viewbox", viewbox);
-      p.set("bounded", "1");
-    }
+    result = (await attemptSearch(p)) ?? result;
+  }
+
+  // Level 3: free-form first part + county (rural townland matches)
+  if (!result.lat && street && street !== address) {
+    const p = withViewbox(new URLSearchParams({ format: "jsonv2", limit: "1", countrycodes: "ie" }));
+    p.set("q", `${street}, ${county}, Ireland`);
+    result = (await attemptSearch(p)) ?? result;
+  }
+
+  // Level 4: free-form bare first part, bounded to county viewbox (restores precision)
+  if (!result.lat && street) {
+    const p = withViewbox(new URLSearchParams({ format: "jsonv2", limit: "1", countrycodes: "ie" }));
+    p.set("q", street);
     result = (await attemptSearch(p)) ?? result;
   }
 

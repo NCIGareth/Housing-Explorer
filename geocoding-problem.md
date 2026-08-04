@@ -36,7 +36,7 @@ Status as of 2026-08-04. All numbers refer to the self-hosted database
 
 | Gap | Size | Why it's stuck |
 |-----|------|----------------|
-| Rows with eircode but **no coordinates** | **194,070** | Needs actual address→point geocoding (this is the current `regeocode.ts` target) |
+| Rows with eircode but **no coordinates** | **194,070** | One subset of the ~496k rows missing coords that `regeocode.ts` is targeting |
 | Rows with coordinates but **no eircode** | **126,150** | Spatial eircode recovery requires a seeded `VerifiedEircodeMap`, which needs the licensed dataset |
 | Eircode mirroring | exhausted (only 410 recoverable) | Eircodes are ~unique, so "copy coords from another row with the same eircode" can't help |
 | Centroid fallback | 0 rows | `internal_geo_reference` is empty — nothing to fall back to |
@@ -79,11 +79,15 @@ Status as of 2026-08-04. All numbers refer to the self-hosted database
 
 ## In progress / next steps
 
-- **`regeocode.ts`** — structured re-geocoding of the 194,070 rows missing
-  coordinates. Level 1: structured `street/city/county/countrycodes/layer`,
-  scoped by county `viewbox`+`bounded`; Level 2: free-form `q=` fallback.
-  Tool image (`housing-tool`) already rebuilt on the server; job not yet run.
-  Expected to lift the 29.3% exact-coordinate rate.
+- **`regeocode.ts`** — structured re-geocoding of the ~496k rows missing
+  coordinates. Four-level fallback cascade, each scoped by county `viewbox` +
+  `bounded`: L1 structured `street/city/county` (`layer=address`), L2 free-form
+  full address, L3 free-form first-part + county (the rural-townland winner),
+  L4 free-form bare first part (bounded to the county). The first attempt
+  (structured + full-address free-form only, `layer=address` on everything)
+  recovered ~0%; the shortened county-suffix fallbacks lifted the hit rate to
+  ~47% (943/2000 on the first batch). Job running detached on the server
+  (`scripts/regeocode.ps1` to start/logs/stop); expected to run several hours.
 - **Re-run `ingest:enrich`** after re-geocoding, so address matching can recover
   more eircodes from newly obtained coordinates.
 - **Routing-key expansion (deferred)** — build a locality→routing-key map from
