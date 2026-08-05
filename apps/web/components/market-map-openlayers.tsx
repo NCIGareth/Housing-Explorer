@@ -14,6 +14,7 @@ import { Point, Circle as GeomCircle } from "ol/geom";
 import { fromLonLat } from "ol/proj";
 import { Style, Icon, Circle, Fill, Stroke, Text } from "ol/style";
 import { boundingExtent } from "ol/extent";
+import { spreadCoincident } from "@/lib/map-spread";
 
 export type MapViewMode = "points" | "heatmap" | "clusters" | "boundaries";
 
@@ -315,23 +316,31 @@ export const MarketMap: React.FC<{
       }
     }
 
+    const resolved: Array<{ id: string; x: number; y: number }> = [];
     for (const point of dataToUse) {
       const coords = resolvePointCoords(point);
       if (!coords) continue;
+      const [x, y] = fromLonLat([coords.lon, coords.lat]);
+      resolved.push({ id: point.id, x, y });
+    }
+    const spread = spreadCoincident(resolved);
+
+    for (const point of dataToUse) {
+      const pos = spread.get(point.id);
+      if (!pos) continue;
 
       const existing = featureMap.get(point.id);
       if (existing) {
         const geom = existing.getGeometry()!;
-        const newCoords = fromLonLat([coords.lon, coords.lat]);
         const old = geom.getCoordinates();
-        if (old[0] !== newCoords[0] || old[1] !== newCoords[1]) {
-          geom.setCoordinates(newCoords);
+        if (old[0] !== pos.x || old[1] !== pos.y) {
+          geom.setCoordinates([pos.x, pos.y]);
           changed = true;
         }
         existing.set("point", point);
       } else {
         const feature = new Feature({
-          geometry: new Point(fromLonLat([coords.lon, coords.lat])),
+          geometry: new Point([pos.x, pos.y]),
           point,
         });
         featureMap.set(point.id, feature);
