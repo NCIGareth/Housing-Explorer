@@ -9,6 +9,7 @@ import VectorSource from "ol/source/Vector";
 import ClusterSource from "ol/source/Cluster";
 import HeatmapLayer from "ol/layer/Heatmap";
 import { Feature } from "ol";
+import type { FeatureLike } from "ol/Feature";
 import { Point, Circle as GeomCircle } from "ol/geom";
 import { fromLonLat } from "ol/proj";
 import { Style, Icon, Circle, Fill, Stroke, Text } from "ol/style";
@@ -74,6 +75,21 @@ const MARKER_STYLE = (() => {
   });
 })();
 
+const SIMILAR_MARKER_STYLE = (() => {
+  const svg = `
+    <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="10" fill="#3b82f6" stroke="white" stroke-width="2"/>
+      <text x="12" y="15" text-anchor="middle" fill="white" font-size="10" font-weight="bold">€</text>
+    </svg>
+  `;
+  return new Style({
+    image: new Icon({
+      src: `data:image/svg+xml;base64,${encodeSVG(svg)}`,
+      scale: 0.8,
+    }),
+  });
+})();
+
 const ERROR_CIRCLE_STYLE = new Style({
   fill: new Fill({ color: "rgba(245, 158, 11, 0.08)" }),
   stroke: new Stroke({ color: "rgba(245, 158, 11, 0.55)", width: 1.5, lineDash: [6, 6] }),
@@ -110,7 +126,7 @@ function createClusterStyle(features: Feature[]) {
   });
 }
 
-function createDataLayer(source: VectorSource, mode: MapViewMode) {
+function createDataLayer(source: VectorSource, mode: MapViewMode, similarIdsRef: { current: Set<string> }) {
   if (mode === "heatmap") {
     return new HeatmapLayer({
       source,
@@ -131,21 +147,20 @@ function createDataLayer(source: VectorSource, mode: MapViewMode) {
     });
   }
 
-  if (mode === "boundaries") {
-    return new VectorLayer({
-      source,
-      style: MARKER_STYLE,
-    });
-  }
+  const pointStyle = (feature: FeatureLike) => {
+    const point = feature.get("point") as PprPoint | undefined;
+    return point && similarIdsRef.current.has(point.id) ? SIMILAR_MARKER_STYLE : MARKER_STYLE;
+  };
 
-  return new VectorLayer({ source, style: MARKER_STYLE });
+  return new VectorLayer({ source, style: pointStyle });
 }
 
 export const MarketMap: React.FC<{
   points?: PprPoint[];
   pprPreview?: PprPoint[];
   viewMode?: MapViewMode;
-}> = React.memo(({ pprPreview, points, viewMode = "points" }) => {
+  similarIds?: string[];
+}> = React.memo(({ pprPreview, points, viewMode = "points", similarIds = [] }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<OlMap | null>(null);
@@ -158,6 +173,8 @@ export const MarketMap: React.FC<{
   viewModeRef.current = viewMode;
   const featureMapRef = useRef<Map<string, Feature<Point>>>(new Map());
   const circleFeatureMapRef = useRef<Map<string, Feature<GeomCircle>>>(new Map());
+  const similarIdsRef = useRef<Set<string>>(new Set());
+  similarIdsRef.current = new Set(similarIds);
 
   const [markerCount, setMarkerCount] = useState(0);
 
@@ -243,7 +260,7 @@ export const MarketMap: React.FC<{
       return;
     }
 
-    const newLayer = createDataLayer(source, mode);
+    const newLayer = createDataLayer(source, mode, similarIdsRef);
     dataLayerRef.current = newLayer;
     map.getLayers().insertAt(1, newLayer);
   }, []);

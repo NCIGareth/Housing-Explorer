@@ -21,13 +21,22 @@ function ErrorNotice({ children }: { children: string }) {
 }
 
 export async function SaleMapSection({ sale }: { sale: PprPoint }) {
+  let similar: PprPoint[] = [];
+  try {
+    const rows = await getSimilarProperties(sale.address, sale.county, sale.id);
+    similar = rows.slice(0, 5);
+  } catch (e) {
+    console.error("Failed to fetch similar properties for map:", e);
+  }
+  const similarIds = similar.map((s) => s.id);
+
   if (sale.latitude && sale.longitude) {
-    return <ClientMapView pprPreview={[sale]} />;
+    return <ClientMapView pprPreview={[sale, ...similar]} similarIds={similarIds} />;
   }
   if (sale.estimatedLatitude && sale.estimatedLongitude) {
     return (
       <div className="relative h-full w-full">
-        <ClientMapView pprPreview={[sale]} />
+        <ClientMapView pprPreview={[sale, ...similar]} similarIds={similarIds} />
         <div className="absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider text-amber-600 border border-amber-200 shadow-sm pointer-events-none">
           Estimated Location{sale.coordinateErrorMeters ? ` · ${formatErrorRadius(sale.coordinateErrorMeters)}` : ""}
         </div>

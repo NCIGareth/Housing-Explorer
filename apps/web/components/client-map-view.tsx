@@ -13,6 +13,7 @@ interface ClientMapProps {
   center?: [number, number];
   zoom?: number;
   pprPreview?: PprPoint[];
+  similarIds?: string[];
 }
 
 const VIEW_OPTIONS: { mode: MapViewMode; label: string }[] = [
@@ -22,13 +23,13 @@ const VIEW_OPTIONS: { mode: MapViewMode; label: string }[] = [
   { mode: "boundaries", label: "Areas" },
 ];
 
-export default function ClientMapView({ pprPreview = [] }: ClientMapProps) {
+export default function ClientMapView({ pprPreview = [], similarIds = [] }: ClientMapProps) {
   const [viewMode, setViewMode] = useState<MapViewMode>("points");
 
   return (
     <div className="flex flex-col gap-4">
       <div className="relative">
-        <OpenLayersMap pprPreview={pprPreview} viewMode={viewMode} />
+        <OpenLayersMap pprPreview={pprPreview} viewMode={viewMode} similarIds={similarIds} />
 
         <div className="absolute top-2 right-2 z-10 flex gap-1 bg-white/90 rounded-lg shadow-sm border p-1" role="group" aria-label="Map view mode">
           {VIEW_OPTIONS.map((opt) => (

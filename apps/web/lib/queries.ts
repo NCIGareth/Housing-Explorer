@@ -571,6 +571,13 @@ export async function getSimilarProperties(address: string, county: string, excl
       descriptionOfProperty: true,
       county: true,
       eircode: true,
+      estimatedEircode: true,
+      latitude: true,
+      longitude: true,
+      estimatedLatitude: true,
+      estimatedLongitude: true,
+      coordinateConfidence: true,
+      coordinateErrorMeters: true,
     },
   });
 }
