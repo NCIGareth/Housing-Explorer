@@ -19,7 +19,7 @@ export async function GET() {
         SELECT
           SUBSTRING(COALESCE(eircode, "estimatedEircode"), 1, 3) AS "key",
           county,
-          SPLIT_PART(address, ',', GREATEST(array_length(string_to_array(address, ','), 1) - 1, 1)) AS locality,
+          TRIM(SPLIT_PART(address, ',', GREATEST(array_length(string_to_array(address, ','), 1) - 1, 1))) AS locality,
           COUNT(*)::int AS volume
         FROM "PropertySale"
         WHERE COALESCE(eircode, "estimatedEircode") IS NOT NULL
