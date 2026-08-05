@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -9,9 +10,12 @@ type EircodeRow = {
   volume: number;
 };
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const { prisma } = await import("@/lib/db");
+    const counties = new URL(request.url).searchParams
+      .getAll("county")
+      .filter((c) => c.trim() !== "");
 
     const rows = await prisma.$queryRaw`
       SELECT "key", county, locality, volume
@@ -23,6 +27,7 @@ export async function GET() {
           COUNT(*)::int AS volume
         FROM "PropertySale"
         WHERE COALESCE(eircode, "estimatedEircode") IS NOT NULL
+        ${counties.length > 0 ? Prisma.sql`AND county = ANY(${counties})` : Prisma.empty}
         GROUP BY 1, 2, 3
       ) t
       ORDER BY volume DESC

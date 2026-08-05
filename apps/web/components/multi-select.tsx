@@ -16,6 +16,7 @@ type Props = {
   placeholder?: string;
   searchPlaceholder?: string;
   emptyMessage?: string;
+  onChange?: (values: string[]) => void;
 };
 
 export function MultiSelect({
@@ -26,6 +27,7 @@ export function MultiSelect({
   placeholder = "Select…",
   searchPlaceholder = "Search…",
   emptyMessage = "No matching options",
+  onChange,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -67,9 +69,13 @@ export function MultiSelect({
   }, [options, search]);
 
   function toggle(value: string) {
-    setValues((prev) =>
-      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
-    );
+    setValues((prev) => {
+      const next = prev.includes(value)
+        ? prev.filter((v) => v !== value)
+        : [...prev, value];
+      onChange?.(next);
+      return next;
+    });
   }
 
   const selectedLabels = values
@@ -119,7 +125,7 @@ export function MultiSelect({
       {values.length > 0 && (
         <button
           type="button"
-          onClick={() => setValues([])}
+          onClick={() => { setValues([]); onChange?.([]); }}
           style={{
             marginTop: 4,
             fontSize: "11px",

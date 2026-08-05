@@ -72,6 +72,7 @@ export const FilterPanel = React.memo(function FilterPanel({
   const [maxPrice, setMaxPrice] = useState(maxPriceEur?.toString() ?? "");
   const [activePreset, setActivePreset] = useState<string | null>(null);
   const [localityText, setLocalityText] = useState((localities ?? []).join(", "));
+  const [countyState, setCountyState] = useState<string[]>(counties);
   const [eircodeOptions, setEircodeOptions] = useState<MultiSelectOption[]>([]);
   const [eircodesLoading, setEircodesLoading] = useState(true);
   const router = useRouter();
@@ -79,7 +80,9 @@ export const FilterPanel = React.memo(function FilterPanel({
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/eircodes")
+    setEircodesLoading(true);
+    const query = countyState.map((c) => `county=${encodeURIComponent(c)}`).join("&");
+    fetch(query ? `/api/eircodes?${query}` : "/api/eircodes")
       .then((res) => res.ok ? res.json() : Promise.reject(new Error(`Failed to load eircodes: ${res.status}`)))
       .then((data: { items: Array<{ key: string; county: string; locality: string }> }) => {
         if (cancelled) return;
@@ -98,7 +101,7 @@ export const FilterPanel = React.memo(function FilterPanel({
         if (!cancelled) setEircodesLoading(false);
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [countyState]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -156,6 +159,7 @@ export const FilterPanel = React.memo(function FilterPanel({
               selected={counties}
               placeholder="Select counties…"
               searchPlaceholder="Search counties…"
+              onChange={setCountyState}
             />
           </div>
 
