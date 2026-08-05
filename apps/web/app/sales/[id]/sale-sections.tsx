@@ -48,9 +48,9 @@ export async function SaleHistorySection({ sale }: { sale: PprPoint }) {
   try {
     [candidateHistory] = await Promise.all([
       getRecentPprSales({
-        county: sale.county,
-        eircode: sale.eircode || undefined,
-        locality: sale.eircode ? undefined : sale.address,
+        counties: [sale.county],
+        eircodes: sale.eircode ? [sale.eircode] : undefined,
+        localities: sale.eircode ? undefined : [sale.address],
         take: 50,
       }),
     ]);

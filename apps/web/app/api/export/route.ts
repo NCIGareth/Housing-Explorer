@@ -32,27 +32,28 @@ export async function GET(req: Request) {
     const { prisma } = await import("@/lib/db");
 
     const url = new URL(req.url);
-    const county = url.searchParams.get("county") ?? "Dublin";
+    const counties = url.searchParams.getAll("county").filter(Boolean);
+    if (counties.length === 0) counties.push("Dublin");
 
     const minPriceRaw = url.searchParams.get("minPriceEur");
     const maxPriceRaw = url.searchParams.get("maxPriceEur");
     const startDateRaw = url.searchParams.get("startDate");
     const endDateRaw = url.searchParams.get("endDate");
 
-    const params: PprFilterParams = { county };
+    const params: PprFilterParams = { counties };
     if (minPriceRaw !== null && minPriceRaw !== "") params.minPriceEur = parseInt(minPriceRaw, 10);
     if (maxPriceRaw !== null && maxPriceRaw !== "") params.maxPriceEur = parseInt(maxPriceRaw, 10);
     if (startDateRaw) params.startDate = new Date(startDateRaw);
     if (endDateRaw) params.endDate = new Date(endDateRaw);
 
-    const eircode = url.searchParams.get("eircode");
+    const eircodes = url.searchParams.getAll("eircode").filter(Boolean);
     const locality = url.searchParams.get("locality");
     const propertyType = url.searchParams.get("propertyType");
     const notFullMarketPrice = url.searchParams.get("notFullMarketPrice") === "on";
     const vatExclusive = url.searchParams.get("vatExclusive") === "on";
 
-    if (eircode) params.eircode = eircode;
-    if (locality) params.locality = locality;
+    if (eircodes.length > 0) params.eircodes = eircodes;
+    if (locality) params.localities = locality.split(",").map((s) => s.trim()).filter(Boolean);
     if (propertyType) params.propertyDescription = propertyType;
     if (notFullMarketPrice) params.notFullMarketPrice = true;
     if (vatExclusive) params.vatExclusive = true;
@@ -82,7 +83,7 @@ export async function GET(req: Request) {
     return new NextResponse(csv, {
       headers: {
         "Content-Type": "text/csv",
-        "Content-Disposition": `attachment; filename="property-sales-${county || "all"}-${new Date().toISOString().split("T")[0]}.csv"`,
+        "Content-Disposition": `attachment; filename="property-sales-${counties.join("+") || "all"}-${new Date().toISOString().split("T")[0]}.csv"`,
         "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
       },
     });

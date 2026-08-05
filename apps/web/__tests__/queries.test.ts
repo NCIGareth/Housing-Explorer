@@ -1,69 +1,63 @@
 import { PrismaClient } from "@prisma/client";
+import { buildPprFilterWhere } from "@/lib/queries";
 
 describe("Query helpers (unit)", () => {
   describe("buildPprFilterWhere", () => {
-    const buildPprFilterWhere = (params: Record<string, unknown>) => {
-      const eircodeFilter = params.eircode
-        ? { eircode: { contains: params.eircode, mode: "insensitive" as const } }
-        : {};
-      const localityFilter = params.locality
-        ? { address: { contains: params.locality, mode: "insensitive" as const } }
-        : {};
-      const priceFilter = (params.minPriceEur !== undefined || params.maxPriceEur !== undefined)
-        ? {
-            priceEur: {
-              ...(params.minPriceEur !== undefined ? { gte: params.minPriceEur } : {}),
-              ...(params.maxPriceEur !== undefined ? { lte: params.maxPriceEur } : {}),
-            },
-          }
-        : {};
-      const dateFilter = params.startDate || params.endDate
-        ? {
-            saleDate: {
-              ...(params.startDate ? { gte: params.startDate } : {}),
-              ...(params.endDate ? { lte: params.endDate } : {}),
-            },
-          }
-        : {};
-      return {
-        county: params.county,
-        ...priceFilter,
-        ...eircodeFilter,
-        ...localityFilter,
-        ...dateFilter,
-      };
-    };
-
-    it("returns county-only filter for empty params", () => {
-      const result = buildPprFilterWhere({ county: "Dublin" });
-      expect(result).toEqual({ county: "Dublin" });
+    it("returns empty filter for empty params", () => {
+      expect(buildPprFilterWhere({ counties: [] })).toEqual({});
     });
 
-    it("includes eircode filter when provided", () => {
-      const result = buildPprFilterWhere({ county: "Dublin", eircode: "D02" });
-      expect(result.eircode).toEqual({ contains: "D02", mode: "insensitive" });
+    it("returns county-in filter for a single county", () => {
+      const result = buildPprFilterWhere({ counties: ["Dublin"] });
+      expect(result).toEqual({ AND: [{ county: { in: ["Dublin"] } }] });
     });
 
-    it("includes locality filter when provided", () => {
-      const result = buildPprFilterWhere({ county: "Cork", locality: "Malahide" });
-      expect(result.address).toEqual({ contains: "Malahide", mode: "insensitive" });
+    it("supports multiple counties", () => {
+      const result = buildPprFilterWhere({ counties: ["Dublin", "Cork"] });
+      expect(result).toEqual({ AND: [{ county: { in: ["Dublin", "Cork"] } }] });
+    });
+
+    it("includes eircode filters when provided", () => {
+      const result = buildPprFilterWhere({ counties: ["Dublin"], eircodes: ["D02", "D14"] });
+      const conds = result.AND!.filter((c) => "OR" in c);
+      expect(conds).toHaveLength(1);
+      expect(conds[0].OR).toHaveLength(2);
+      expect(conds[0].OR![0]).toEqual({
+        OR: [
+          { eircode: { startsWith: "D02", mode: "insensitive" } },
+          { estimatedEircode: { startsWith: "D02", mode: "insensitive" } },
+        ],
+      });
+    });
+
+    it("includes locality filters when provided", () => {
+      const result = buildPprFilterWhere({ counties: ["Cork"], localities: ["Malahide", "Swords"] });
+      const conds = result.AND!.filter((c) => "OR" in c);
+      expect(conds).toHaveLength(1);
+      expect(conds[0].OR).toEqual([
+        { address: { contains: "Malahide", mode: "insensitive" } },
+        { address: { contains: "Swords", mode: "insensitive" } },
+      ]);
     });
 
     it("builds price range filter", () => {
-      const result = buildPprFilterWhere({ county: "Dublin", minPriceEur: 200000, maxPriceEur: 500000 });
-      expect(result.priceEur).toEqual({ gte: 200000, lte: 500000 });
+      const result = buildPprFilterWhere({ counties: ["Dublin"], minPriceEur: 200000, maxPriceEur: 500000 });
+      const cond = result.AND!.find((c) => "priceEur" in c);
+      expect(cond?.priceEur).toEqual({ gte: 200000, lte: 500000 });
     });
 
     it("builds date range filter", () => {
       const start = new Date("2024-01-01");
       const end = new Date("2024-12-31");
-      const result = buildPprFilterWhere({ county: "Dublin", startDate: start, endDate: end });
-      expect(result.saleDate).toEqual({ gte: start, lte: end });
+      const result = buildPprFilterWhere({ counties: ["Dublin"], startDate: start, endDate: end });
+      const cond = result.AND!.find((c) => "saleDate" in c);
+      expect(cond?.saleDate).toEqual({ gte: start, lte: end });
     });
 
     it("handles min price only", () => {
-      const result = buildPprFilterWhere({ county: "Dublin", minPriceEur: 100000 });
-      expect(result.priceEur).toEqual({ gte: 100000 });
+      const result = buildPprFilterWhere({ counties: ["Dublin"], minPriceEur: 100000 });
+      const cond = result.AND!.find((c) => "priceEur" in c);
+      expect(cond?.priceEur).toEqual({ gte: 100000 });
     });
   });
 

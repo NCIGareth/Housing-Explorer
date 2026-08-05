@@ -87,9 +87,9 @@ export async function getLocalCrimeStats(county: string, locality?: string) {
 
 /** Monthly median sale price (EUR) from the Property Price Register. Supports filtering. */
 export async function getPprMedianPriceByMonth(params: {
-  county: string;
-  eircode?: string;
-  locality?: string;
+  counties: string[];
+  eircodes?: string[];
+  localities?: string[];
   minPriceEur?: number;
   maxPriceEur?: number;
   startDate?: Date;
@@ -101,15 +101,16 @@ export async function getPprMedianPriceByMonth(params: {
   if (isBuildPhase()) return [];
   const prisma = await getDb();
 
-  // Use pre-computed cache when no additional filters are applied
-  const useCache = !params.eircode && !params.locality && !params.propertyDescription &&
+  // Use pre-computed cache when a single county and no additional filters are applied
+  const useCache = params.counties.length === 1 && !params.eircodes?.length &&
+    !params.localities?.length && !params.propertyDescription &&
     !params.startDate && !params.endDate && params.minPriceEur === undefined &&
     params.maxPriceEur === undefined && params.notFullMarketPrice === undefined &&
     params.vatExclusive === undefined;
 
   if (useCache) {
     const cached = await prisma.medianPriceCache.findMany({
-      where: { county: params.county },
+      where: { county: params.counties[0] },
       orderBy: { period: "asc" },
       select: { period: true, value: true },
     });
@@ -120,15 +121,16 @@ export async function getPprMedianPriceByMonth(params: {
 
   const whereClauses = [];
   
-  // Always filter by county
-  whereClauses.push(Prisma.sql`county = ${params.county}`);
-
-  if (params.eircode) {
-    whereClauses.push(Prisma.sql`eircode ILIKE ${'%' + params.eircode + '%'}`);
+  if (params.counties.length > 0) {
+    whereClauses.push(Prisma.sql`county = ANY(${params.counties})`);
   }
 
-  if (params.locality) {
-    whereClauses.push(Prisma.sql`address ILIKE ${'%' + params.locality + '%'}`);
+  if (params.eircodes && params.eircodes.length > 0) {
+    whereClauses.push(Prisma.sql`SUBSTRING(COALESCE(eircode, "estimatedEircode"), 1, 3) = ANY(${params.eircodes})`);
+  }
+
+  if (params.localities && params.localities.length > 0) {
+    whereClauses.push(Prisma.sql`address ILIKE ANY(${params.localities.map((l) => `%${l}%`)})`);
   }
 
   if (params.propertyDescription) {
@@ -173,9 +175,9 @@ export async function getPprMedianPriceByMonth(params: {
 }
 
 export type PprFilterParams = {
-  county: string;
-  eircode?: string;
-  locality?: string;
+  counties: string[];
+  eircodes?: string[];
+  localities?: string[];
   minPriceEur?: number;
   maxPriceEur?: number;
   startDate?: Date;
@@ -186,52 +188,64 @@ export type PprFilterParams = {
 };
 
 export function buildPprFilterWhere(params: PprFilterParams) {
-  const eircodeFilter = params.eircode
-    ? { eircode: { contains: params.eircode, mode: "insensitive" as const } }
-    : {};
+  const conditions: Prisma.PropertySaleWhereInput[] = [];
 
-  const localityFilter = params.locality
-    ? { address: { contains: params.locality, mode: "insensitive" as const } }
-    : {};
+  if (params.counties.length > 0) {
+    conditions.push({ county: { in: params.counties } });
+  }
 
-  const propertyDescFilter = params.propertyDescription
-    ? { descriptionOfProperty: { contains: params.propertyDescription, mode: "insensitive" as const } }
-    : {};
+  if (params.eircodes && params.eircodes.length > 0) {
+    conditions.push({
+      OR: params.eircodes.map((e) => ({
+        OR: [
+          { eircode: { startsWith: e, mode: "insensitive" as const } },
+          { estimatedEircode: { startsWith: e, mode: "insensitive" as const } },
+        ],
+      })),
+    });
+  }
 
-  const dateFilter = params.startDate || params.endDate ? {
-    saleDate: {
-      ...(params.startDate ? { gte: params.startDate } : {}),
-      ...(params.endDate ? { lte: params.endDate } : {})
-    }
-  } : {};
+  if (params.localities && params.localities.length > 0) {
+    conditions.push({
+      OR: params.localities.map((l) => ({
+        address: { contains: l, mode: "insensitive" as const },
+      })),
+    });
+  }
 
-  const marketPriceFilter = params.notFullMarketPrice !== undefined
-    ? { notFullMarketPrice: params.notFullMarketPrice }
-    : {};
+  if (params.propertyDescription) {
+    conditions.push({
+      descriptionOfProperty: { contains: params.propertyDescription, mode: "insensitive" as const },
+    });
+  }
 
-  const vatFilter = params.vatExclusive !== undefined
-    ? { vatExclusive: params.vatExclusive }
-    : {};
-
-  const priceFilter = (params.minPriceEur !== undefined || params.maxPriceEur !== undefined)
-    ? {
-        priceEur: {
-          ...(params.minPriceEur !== undefined ? { gte: params.minPriceEur } : {}),
-          ...(params.maxPriceEur !== undefined ? { lte: params.maxPriceEur } : {}),
-        }
+  if (params.startDate || params.endDate) {
+    conditions.push({
+      saleDate: {
+        ...(params.startDate ? { gte: params.startDate } : {}),
+        ...(params.endDate ? { lte: params.endDate } : {})
       }
-    : {};
+    });
+  }
 
-  return {
-    county: params.county,
-    ...priceFilter,
-    ...eircodeFilter,
-    ...localityFilter,
-    ...propertyDescFilter,
-    ...dateFilter,
-    ...marketPriceFilter,
-    ...vatFilter,
-  };
+  if (params.notFullMarketPrice !== undefined) {
+    conditions.push({ notFullMarketPrice: params.notFullMarketPrice });
+  }
+
+  if (params.vatExclusive !== undefined) {
+    conditions.push({ vatExclusive: params.vatExclusive });
+  }
+
+  if (params.minPriceEur !== undefined || params.maxPriceEur !== undefined) {
+    conditions.push({
+      priceEur: {
+        ...(params.minPriceEur !== undefined ? { gte: params.minPriceEur } : {}),
+        ...(params.maxPriceEur !== undefined ? { lte: params.maxPriceEur } : {}),
+      }
+    });
+  }
+
+  return conditions.length > 0 ? { AND: conditions } : {};
 }
 
 
@@ -250,9 +264,9 @@ const PPR_CACHE_MAX = 50;
 const pprCacheKeys: string[] = [];
 
 type PprSalesParams = {
-  county: string;
-  eircode?: string;
-  locality?: string;
+  counties: string[];
+  eircodes?: string[];
+  localities?: string[];
   minPriceEur?: number;
   maxPriceEur?: number;
   startDate?: Date;
@@ -501,7 +515,7 @@ export async function getMultiHistoricalSeries(areas: string[]) {
   const pprFallbacks: Promise<Array<{ period: string; value: number }>>[] = [];
   for (let i = 0; i < areas.length; i++) {
     if (csoResults[i].length === 0) {
-      pprFallbacks.push(getPprMedianPriceByMonth({ county: areas[i] }));
+      pprFallbacks.push(getPprMedianPriceByMonth({ counties: [areas[i]] }));
     } else {
       pprFallbacks.push(Promise.resolve([]));
     }

@@ -35,17 +35,17 @@ export function PprSalesTable({
 }) {
   const hasPreviousPage = currentPage > 1;
 
-  function toParam(v: string | string[] | undefined): string | undefined {
-    if (v === undefined || v === "") return undefined;
-    return Array.isArray(v) ? v[0] : v;
-  }
-
   function buildHref(overrides: Record<string, string | undefined>) {
-    const entries = Object.entries({ ...searchParams, ...overrides })
-      .map(([k, v]) => [k, toParam(v)] as const)
-      .filter(([, v]) => v !== undefined && v !== "");
-    const qs = entries.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v!)}`).join("&");
-    return `/?${qs}`;
+    const parts: string[] = [];
+    for (const [k, v] of Object.entries({ ...searchParams, ...overrides })) {
+      if (v === undefined || v === "") continue;
+      const vals = Array.isArray(v) ? v : [v];
+      for (const vv of vals) {
+        if (vv === undefined || vv === "") continue;
+        parts.push(`${encodeURIComponent(k)}=${encodeURIComponent(vv)}`);
+      }
+    }
+    return parts.length > 0 ? `/?${parts.join("&")}` : "/";
   }
 
   return (

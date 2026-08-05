@@ -44,7 +44,9 @@ export async function POST() {
         where: {
           AND: [
             { createdAt: { gt: since } },
-            ...(criteria.county ? [{ county: criteria.county }] : []),
+            ...(criteria.county
+              ? [{ county: { in: criteria.county.split(",").map((s) => s.trim()).filter(Boolean) } }]
+              : []),
             ...(criteria.minPriceEur != null ? [{ priceEur: { gte: criteria.minPriceEur } }] : []),
             ...(criteria.maxPriceEur != null ? [{ priceEur: { lte: criteria.maxPriceEur } }] : []),
           ],

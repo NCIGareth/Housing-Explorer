@@ -1,28 +1,33 @@
 "use client";
 
-import React, { useTransition, useState } from "react";
+import React, { useTransition, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { MultiSelect, type MultiSelectOption } from "./multi-select";
 
 type Props = {
-  county?: string;
-  eircode?: string;
+  counties: string[];
+  eircodes?: string[];
   minPriceEur?: number;
   maxPriceEur?: number;
   propertyType?: string;
   startDate?: string;
   endDate?: string;
-  locality?: string;
+  localities?: string[];
   notFullMarketPrice?: boolean;
   vatExclusive?: boolean;
 };
 
-const COUNTIES = [
-  "Carlow", "Cavan", "Clare", "Cork", "Donegal", "Dublin", "Galway", "Kerry",
-  "Kildare", "Kilkenny", "Laois", "Leitrim", "Limerick", "Longford", "Louth",
-  "Mayo", "Meath", "Monaghan", "Offaly", "Roscommon", "Sligo", "Tipperary",
-  "Waterford", "Westmeath", "Wexford", "Wicklow"
+const COUNTY_GROUPS: Array<{ province: string; counties: string[] }> = [
+  { province: "Leinster", counties: ["Carlow", "Dublin", "Kildare", "Kilkenny", "Laois", "Longford", "Louth", "Meath", "Offaly", "Westmeath", "Wexford", "Wicklow"] },
+  { province: "Munster", counties: ["Clare", "Cork", "Kerry", "Limerick", "Tipperary", "Waterford"] },
+  { province: "Connacht", counties: ["Galway", "Leitrim", "Mayo", "Roscommon", "Sligo"] },
+  { province: "Ulster", counties: ["Cavan", "Donegal", "Monaghan"] },
 ];
+
+const COUNTY_OPTIONS: MultiSelectOption[] = COUNTY_GROUPS.flatMap((g) =>
+  g.counties.map((c) => ({ value: c, label: c, group: g.province }))
+);
 
 const PRICE_PRESETS = [
   { label: "Under €300k", min: 0, max: 300000 },
@@ -52,22 +57,48 @@ const inputStyle: React.CSSProperties = {
 };
 
 export const FilterPanel = React.memo(function FilterPanel({
-  county,
-  eircode,
+  counties,
+  eircodes,
   minPriceEur,
   maxPriceEur,
   propertyType,
   startDate,
   endDate,
-  locality,
+  localities,
   notFullMarketPrice,
   vatExclusive
 }: Props) {
   const [minPrice, setMinPrice] = useState(minPriceEur?.toString() ?? "");
   const [maxPrice, setMaxPrice] = useState(maxPriceEur?.toString() ?? "");
   const [activePreset, setActivePreset] = useState<string | null>(null);
+  const [localityText, setLocalityText] = useState((localities ?? []).join(", "));
+  const [eircodeOptions, setEircodeOptions] = useState<MultiSelectOption[]>([]);
+  const [eircodesLoading, setEircodesLoading] = useState(true);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/eircodes")
+      .then((res) => res.ok ? res.json() : Promise.reject(new Error(`Failed to load eircodes: ${res.status}`)))
+      .then((data: { items: Array<{ key: string; county: string; locality: string }> }) => {
+        if (cancelled) return;
+        setEircodeOptions(
+          data.items.map((item) => ({
+            value: item.key,
+            label: item.locality && item.locality.toLowerCase() !== item.county.toLowerCase()
+              ? `${item.key} — ${item.locality}`
+              : item.key,
+            group: item.county,
+          }))
+        );
+      })
+      .catch((err) => console.error(err))
+      .finally(() => {
+        if (!cancelled) setEircodesLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -75,7 +106,7 @@ export const FilterPanel = React.memo(function FilterPanel({
     const params = new URLSearchParams();
     for (const [key, value] of formData.entries()) {
       if (typeof value === "string" && value.trim() !== "") {
-        params.set(key, value);
+        params.append(key, value);
       }
     }
     const qs = params.toString();
@@ -118,10 +149,14 @@ export const FilterPanel = React.memo(function FilterPanel({
         {/* Main Grid */}
         <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
           <div>
-            <label htmlFor="county" style={labelStyle}>County</label>
-            <select id="county" name="county" defaultValue={county ?? "Dublin"} style={inputStyle}>
-              {COUNTIES.map((c: string) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <MultiSelect
+              name="county"
+              label="Counties"
+              options={COUNTY_OPTIONS}
+              selected={counties}
+              placeholder="Select counties…"
+              searchPlaceholder="Search counties…"
+            />
           </div>
 
           <div>
@@ -216,12 +251,28 @@ export const FilterPanel = React.memo(function FilterPanel({
           paddingTop: "20px"
         }}>
           <div>
-            <label htmlFor="locality" style={labelStyle}>Area / Town</label>
-            <input id="locality" name="locality" defaultValue={locality ?? ""} placeholder="e.g. Malahide" style={inputStyle} />
+            <label htmlFor="locality" style={labelStyle}>Areas / Towns</label>
+            <input
+              id="locality"
+              name="locality"
+              type="text"
+              value={localityText}
+              onChange={(e) => setLocalityText(e.target.value)}
+              placeholder="e.g. Malahide, Swords"
+              style={inputStyle}
+            />
+            <p style={{ margin: "4px 0 0", fontSize: "11px", color: "#94a3b8" }}>Separate multiple areas with commas</p>
           </div>
           <div>
-            <label htmlFor="eircode" style={labelStyle}>Eircode Sector</label>
-            <input id="eircode" name="eircode" defaultValue={eircode ?? ""} placeholder="e.g. D14" style={inputStyle} />
+            <MultiSelect
+              name="eircode"
+              label="Eircode Sector"
+              options={eircodeOptions}
+              selected={eircodes ?? []}
+              placeholder={eircodesLoading ? "Loading…" : "Select eircodes…"}
+              searchPlaceholder="Search eircode or town…"
+              emptyMessage={eircodesLoading ? "Loading…" : "No matching eircodes"}
+            />
           </div>
           <div>
             <label htmlFor="propertyType" style={labelStyle}>Property Type</label>

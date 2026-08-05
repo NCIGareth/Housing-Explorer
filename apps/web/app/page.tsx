@@ -20,8 +20,8 @@ export const dynamic = "force-dynamic";
 
 type PageProps = {
   searchParams: Promise<{
-    county?: string;
-    eircode?: string;
+    county?: string | string[];
+    eircode?: string | string[];
     minPriceEur?: string;
     maxPriceEur?: string;
     propertyType?: string;
@@ -35,15 +35,21 @@ type PageProps = {
   }>;
 };
 
+function toArray(v: string | string[] | undefined): string[] {
+  if (v === undefined) return [];
+  return Array.isArray(v) ? v : [v];
+}
+
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const params = await searchParams;
-  const county = params.county ?? "Dublin";
+  const counties = toArray(params.county);
+  const label = counties.length > 0 ? counties.join(", ") : "Dublin";
 
   return {
-    title: county === "Dublin" ? undefined : `${county} Property Prices`,
-    description: `Explore ${county} property sale prices from the Property Price Register. Interactive map, price trends, and area comparisons for ${county}.`,
+    title: label === "Dublin" ? undefined : `${label} Property Prices`,
+    description: `Explore ${label} property sale prices from the Property Price Register. Interactive map, price trends, and area comparisons for ${label}.`,
     alternates: {
-      canonical: `/?county=${encodeURIComponent(county)}`,
+      canonical: counties.length === 1 ? `/?county=${encodeURIComponent(counties[0])}` : undefined,
     },
   };
 }
@@ -51,28 +57,30 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 export default async function Home({ searchParams }: PageProps) {
   const params = await searchParams;
 
-  const county = params.county ?? "Dublin";
-  const eircode = params.eircode;
+  const counties = toArray(params.county);
+  if (counties.length === 0) counties.push("Dublin");
+  const eircodes = toArray(params.eircode);
+  const localities = toArray(params.locality)
+    .flatMap((s) => s.split(",").map((x) => x.trim()).filter(Boolean));
   const minPriceEur = params.minPriceEur ? Number(params.minPriceEur) : undefined;
   const maxPriceEur = params.maxPriceEur ? Number(params.maxPriceEur) : undefined;
   const propertyType = params.propertyType;
   const startDate = params.startDate ? new Date(params.startDate) : undefined;
   const endDate = params.endDate ? new Date(params.endDate) : undefined;
-  const locality = params.locality;
   const notFullMarketPrice = params.notFullMarketPrice === "on";
   const vatExclusive = params.vatExclusive === "on";
   const page = params.page ? Math.max(1, Number(params.page)) : 1;
   const pageSize = Math.min(100, Math.max(10, Number(params.pageSize) || 20));
 
   const filterParams = {
-    county,
-    eircode,
+    counties,
+    eircodes,
+    localities,
     minPriceEur,
     maxPriceEur,
     propertyType,
     startDate,
     endDate,
-    locality,
     notFullMarketPrice,
     vatExclusive,
     page,
@@ -87,7 +95,7 @@ export default async function Home({ searchParams }: PageProps) {
         </h1>
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-slate-500 text-sm flex items-center gap-2">
-            Exploring data for <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold uppercase text-[11px] tracking-wider">{county}</span>
+            Exploring data for <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold uppercase text-[11px] tracking-wider">{counties.join(" + ")}</span>
           </p>
           <CopyLinkButton />
         </div>
@@ -125,14 +133,14 @@ export default async function Home({ searchParams }: PageProps) {
 
       <div id="research-section" className="grid grid-cols-1 gap-8">
         <FilterPanel
-          county={county}
-          eircode={eircode}
+          counties={counties}
+          eircodes={eircodes}
           minPriceEur={minPriceEur}
           maxPriceEur={maxPriceEur}
           propertyType={propertyType}
           startDate={params.startDate}
           endDate={params.endDate}
-          locality={locality}
+          localities={localities}
           notFullMarketPrice={notFullMarketPrice}
           vatExclusive={vatExclusive}
         />
@@ -161,7 +169,7 @@ export default async function Home({ searchParams }: PageProps) {
         </div>
 
         <Suspense fallback={<DashboardTableSkeleton />}>
-          <DashboardTableSection params={filterParams} searchParams={params as Record<string, string>} />
+          <DashboardTableSection params={filterParams} searchParams={params} />
         </Suspense>
 
         <div id="trend-section">

@@ -11,21 +11,18 @@ export function SaveSearchButton() {
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
 
-  const county = searchParams.get("county");
+  const counties = searchParams.getAll("county").length > 0 ? searchParams.getAll("county") : ["Dublin"];
+  const county = counties.join(", ");
   const minPriceEur = searchParams.get("minPriceEur");
   const maxPriceEur = searchParams.get("maxPriceEur");
 
   const toK = (v: string) => `€${Math.round(parseInt(v, 10) / 1000)}k`;
 
   let name: string;
-  if (county) {
-    if (minPriceEur && maxPriceEur) name = `${county} ${toK(minPriceEur)}-${toK(maxPriceEur)}`;
-    else if (minPriceEur) name = `${county} from ${toK(minPriceEur)}`;
-    else if (maxPriceEur) name = `${county} up to ${toK(maxPriceEur)}`;
-    else name = county;
-  } else {
-    name = "Ireland property sales";
-  }
+  if (minPriceEur && maxPriceEur) name = `${county} ${toK(minPriceEur)}-${toK(maxPriceEur)}`;
+  else if (minPriceEur) name = `${county} from ${toK(minPriceEur)}`;
+  else if (maxPriceEur) name = `${county} up to ${toK(maxPriceEur)}`;
+  else name = county === "Dublin" ? "Ireland property sales" : county;
 
   async function handleClick() {
     if (!user) {

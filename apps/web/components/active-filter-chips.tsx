@@ -11,6 +11,12 @@ function fmt(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
 }
 
+function fmtAll(v: string | string[] | undefined): string[] {
+  if (v === undefined) return [];
+  const vals = Array.isArray(v) ? v : [v];
+  return vals.filter((x) => x !== undefined && x !== "");
+}
+
 function fmtPrice(v: string): string {
   return `€${Number(v).toLocaleString()}`;
 }
@@ -18,7 +24,7 @@ function fmtPrice(v: string): string {
 export function ActiveFilterChips({ searchParams = {} }: Props) {
   const chips: Array<{ label: string; key: string }> = [];
 
-  const eircode = fmt(searchParams.eircode);
+  const eircodes = fmtAll(searchParams.eircode);
   const locality = fmt(searchParams.locality);
   const minPriceEur = fmt(searchParams.minPriceEur);
   const maxPriceEur = fmt(searchParams.maxPriceEur);
@@ -30,27 +36,33 @@ export function ActiveFilterChips({ searchParams = {} }: Props) {
 
   if (minPriceEur && minPriceEur !== "0") chips.push({ label: `From ${fmtPrice(minPriceEur)}`, key: "minPriceEur" });
   if (maxPriceEur) chips.push({ label: `Up to ${fmtPrice(maxPriceEur)}`, key: "maxPriceEur" });
-  if (eircode) chips.push({ label: `Eircode: ${eircode}`, key: "eircode" });
-  if (locality) chips.push({ label: `Area: ${locality}`, key: "locality" });
+  if (eircodes.length > 0) chips.push({ label: `Eircode: ${eircodes.join(", ")}`, key: "eircode" });
+  if (locality) chips.push({ label: `Areas: ${locality}`, key: "locality" });
   if (propertyType) chips.push({ label: propertyType.includes("New") ? "New build" : "Second-hand", key: "propertyType" });
   if (startDate) chips.push({ label: `From ${startDate}`, key: "startDate" });
   if (endDate) chips.push({ label: `To ${endDate}`, key: "endDate" });
   if (notFullMarketPrice) chips.push({ label: "Non-market price", key: "notFullMarketPrice" });
   if (vatExclusive) chips.push({ label: "Ex-VAT", key: "vatExclusive" });
 
-  const county = fmt(searchParams.county);
-  if (county && county !== "Dublin") {
-    chips.unshift({ label: county, key: "county" });
+  const counties = fmtAll(searchParams.county);
+  const visibleCounties = counties.length === 1 && counties[0] === "Dublin" ? [] : counties;
+  if (visibleCounties.length > 0) {
+    chips.unshift({ label: visibleCounties.join(" + "), key: "county" });
   }
 
   if (chips.length === 0) return null;
 
   function hrefWithout(key: string) {
-    const entries = Object.entries(searchParams)
-      .map(([k, v]) => [k, fmt(v)] as const)
-      .filter(([k, v]) => k !== key && v !== undefined && v !== "");
-    const qs = entries.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v!)}`).join("&");
-    return qs ? `/?${qs}` : "/";
+    const parts: string[] = [];
+    for (const [k, v] of Object.entries(searchParams)) {
+      if (k === key || v === undefined) continue;
+      const vals = Array.isArray(v) ? v : [v];
+      for (const vv of vals) {
+        if (vv === undefined || vv === "") continue;
+        parts.push(`${encodeURIComponent(k)}=${encodeURIComponent(vv)}`);
+      }
+    }
+    return parts.length > 0 ? `/?${parts.join("&")}` : "/";
   }
 
   return (

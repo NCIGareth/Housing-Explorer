@@ -11,14 +11,14 @@ import {
 } from "@/lib/queries";
 
 type FilterParams = {
-  county: string;
-  eircode?: string;
+  counties: string[];
+  eircodes?: string[];
+  localities?: string[];
   minPriceEur?: number;
   maxPriceEur?: number;
   propertyType?: string;
   startDate?: Date;
   endDate?: Date;
-  locality?: string;
   notFullMarketPrice?: boolean;
   vatExclusive?: boolean;
   page: number;
@@ -27,9 +27,9 @@ type FilterParams = {
 
 function buildQueryParams(p: FilterParams) {
   return {
-    county: p.county,
-    eircode: p.eircode,
-    locality: p.locality,
+    counties: p.counties,
+    eircodes: p.eircodes,
+    localities: p.localities,
     minPriceEur: p.minPriceEur,
     maxPriceEur: p.maxPriceEur,
     propertyDescription: p.propertyType,
@@ -62,7 +62,8 @@ export async function DashboardChartsSection({ params }: { params: FilterParams 
   let error = false;
 
   try {
-    historical = await getHistoricalSeries(params.county);
+    const singleCounty = params.counties.length === 1 ? params.counties[0] : null;
+    historical = singleCounty ? await getHistoricalSeries(singleCounty) : [];
     const useCso = historical && historical.length > 1;
     if (!useCso) {
       pprSeries = await getPprMedianPriceByMonth(qp);
@@ -118,7 +119,7 @@ export async function DashboardMapSection({ params }: { params: FilterParams }) 
   );
 }
 
-export async function DashboardTableSection({ params, searchParams }: { params: FilterParams; searchParams: Record<string, string> }) {
+export async function DashboardTableSection({ params, searchParams }: { params: FilterParams; searchParams: Record<string, string | string[] | undefined> }) {
   const qp = buildQueryParams(params);
 
   let pprSales: Awaited<ReturnType<typeof getRecentPprSales>> = [];

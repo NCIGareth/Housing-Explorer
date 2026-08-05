@@ -9,8 +9,10 @@ export function ExportButton() {
   const [error, setError] = useState(false);
 
   const params = new URLSearchParams();
-  const county = searchParams.get("county") ?? "Dublin";
-  const eircode = searchParams.get("eircode");
+  const counties = searchParams.getAll("county");
+  const countyList = counties.length > 0 ? counties : ["Dublin"];
+  for (const c of countyList) params.append("county", c);
+  for (const e of searchParams.getAll("eircode")) params.append("eircode", e);
   const minPriceEur = searchParams.get("minPriceEur");
   const maxPriceEur = searchParams.get("maxPriceEur");
   const propertyType = searchParams.get("propertyType");
@@ -20,8 +22,6 @@ export function ExportButton() {
   const notFullMarketPrice = searchParams.get("notFullMarketPrice");
   const vatExclusive = searchParams.get("vatExclusive");
 
-  params.set("county", county);
-  if (eircode) params.set("eircode", eircode);
   if (minPriceEur) params.set("minPriceEur", minPriceEur);
   if (maxPriceEur) params.set("maxPriceEur", maxPriceEur);
   if (propertyType) params.set("propertyType", propertyType);
