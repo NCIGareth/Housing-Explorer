@@ -236,14 +236,20 @@ export default async function PprSaleDetailPage({ params }: Props) {
             </Suspense>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {routingKey && (
-              <Suspense fallback={<SaleAreaSkeleton />}>
-                <SaleAreaSection routingKey={routingKey} county={sale.county} />
-              </Suspense>
-            )}
+          <Suspense fallback={<SaleCrimeSkeleton />}>
+            <SaleCrimeSection county={sale.county} locality={crimeLocality} />
+          </Suspense>
+        </aside>
+      </div>
 
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {routingKey && (
+          <Suspense fallback={<SaleAreaSkeleton />}>
+            <SaleAreaSection routingKey={routingKey} county={sale.county} />
+          </Suspense>
+        )}
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
               <div className="flex items-center gap-2">
                 <span className="text-xl" aria-hidden="true">🔍</span>
                 <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900">Deep Dive Research</h3>
@@ -275,16 +281,10 @@ export default async function PprSaleDetailPage({ params }: Props) {
               </Suspense>
             </div>
 
-            <Suspense fallback={<SaleCrimeSkeleton />}>
-              <SaleCrimeSection county={sale.county} locality={crimeLocality} />
+            <Suspense fallback={<div className="h-40 animate-pulse bg-slate-100 rounded-2xl" />}>
+              <SimilarPropertiesSection address={sale.address} county={sale.county} excludeId={sale.id} />
             </Suspense>
           </div>
-        </aside>
-      </div>
-
-      <Suspense fallback={<div className="h-32 animate-pulse bg-slate-100 rounded-2xl" />}>
-        <SimilarPropertiesSection address={sale.address} county={sale.county} excludeId={sale.id} />
-      </Suspense>
 
       <footer className="pt-12 border-t border-slate-100">
         <div className="bg-slate-50 rounded-2xl p-6 text-xs text-slate-500 leading-relaxed border border-slate-100">

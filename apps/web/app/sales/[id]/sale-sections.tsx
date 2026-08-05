@@ -86,7 +86,7 @@ export async function SaleHistorySection({ sale }: { sale: PprPoint }) {
 
   return (
     <ul className="space-y-4">
-      {uniqueHistory.map((h) => (
+      {uniqueHistory.slice(0, 10).map((h) => (
         <li key={h.id} className="flex justify-between items-start group">
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
@@ -185,19 +185,19 @@ export async function SimilarPropertiesSection({ address, county, excludeId }: {
   if (similar.length === 0) return null;
 
   return (
-    <section className="space-y-4">
-      <h2 className="text-lg font-bold flex items-center gap-2">
+    <section className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 h-full">
+      <div className="flex items-center gap-2">
         <span className="w-2 h-2 bg-blue-500 rounded-full" />
-        Similar Properties on This Street
-      </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {similar.map((p) => (
-          <Link key={p.id} href={`/sales/${p.id}`} className="block p-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all no-underline">
-            <p className="text-xs text-slate-500 font-medium leading-snug line-clamp-2 mb-2" title={p.address}>
+        <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">Similar Properties on This Street</h2>
+      </div>
+      <div className="space-y-3">
+        {similar.slice(0, 5).map((p) => (
+          <Link key={p.id} href={`/sales/${p.id}`} className="block p-3 bg-slate-50 rounded-xl border border-slate-100 hover:border-blue-300 hover:shadow-sm transition-all no-underline">
+            <p className="text-xs text-slate-600 font-medium leading-snug line-clamp-2 mb-1.5" title={p.address}>
               {p.address}
             </p>
             <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-900 text-sm">
+              <span className="font-black text-slate-900 text-sm">
                 €{p.priceEur.toLocaleString()}
               </span>
               <span className="text-[11px] text-slate-400 font-medium">
