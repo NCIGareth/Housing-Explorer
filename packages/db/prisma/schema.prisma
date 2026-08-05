@@ -129,6 +129,8 @@ model PropertySale {
   estimatedEircode        String?
   estimatedLatitude       Float?
   estimatedLongitude      Float?
+  coordinateConfidence    Float?
+  coordinateErrorMeters   Int?
   createdAt               DateTime @default(now())
   favouriteProperties     FavouriteProperty[]
 

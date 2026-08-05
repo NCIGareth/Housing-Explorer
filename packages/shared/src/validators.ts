@@ -45,5 +45,7 @@ export const propertySaleSchema = z.object({
   longitude: z.number().min(-180).max(180).nullable(),
   estimatedEircode: z.string().optional().nullable(),
   estimatedLatitude: z.number().min(-90).max(90).nullable().optional(),
-  estimatedLongitude: z.number().min(-180).max(180).nullable().optional()
+  estimatedLongitude: z.number().min(-180).max(180).nullable().optional(),
+  coordinateConfidence: z.number().min(0).max(100).nullable().optional(),
+  coordinateErrorMeters: z.number().int().nonnegative().nullable().optional()
 });

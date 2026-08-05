@@ -4,6 +4,7 @@ import { getLocalCrimeStats, getRecentPprSales, getSimilarProperties, getSingleE
 import ClientMapView from "@/components/client-map-view";
 import { CrimeStatsGrid } from "@/components/crime-stats-grid";
 import { AreaSnapshot } from "@/components/area-snapshot";
+import { formatErrorRadius } from "@/components/coordinate-confidence-badge";
 
 function Skeleton({ className = "" }: { className?: string }) {
   return (
@@ -28,7 +29,7 @@ export async function SaleMapSection({ sale }: { sale: PprPoint }) {
       <div className="relative h-full w-full">
         <ClientMapView pprPreview={[sale]} />
         <div className="absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider text-amber-600 border border-amber-200 shadow-sm pointer-events-none">
-          Estimated Location
+          Estimated Location{sale.coordinateErrorMeters ? ` · ${formatErrorRadius(sale.coordinateErrorMeters)}` : ""}
         </div>
       </div>
     );

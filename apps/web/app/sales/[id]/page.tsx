@@ -10,6 +10,7 @@ import {
 import { Suspense } from "react";
 import type { PprPoint } from "@/components/market-map-openlayers";
 import { SavePropertyButton } from "@/components/save-property-button";
+import { CoordinateConfidenceBadge } from "@/components/coordinate-confidence-badge";
 import {
   SaleMapSection,
   SaleHistorySection,
@@ -97,6 +98,8 @@ export default async function PprSaleDetailPage({ params }: Props) {
     estimatedEircode: sale.estimatedEircode,
     estimatedLatitude: sale.estimatedLatitude,
     estimatedLongitude: sale.estimatedLongitude,
+    coordinateConfidence: sale.coordinateConfidence,
+    coordinateErrorMeters: sale.coordinateErrorMeters,
   };
 
   return (
@@ -200,6 +203,19 @@ export default async function PprSaleDetailPage({ params }: Props) {
                   "Not Filed"
                 )}
               </span>
+            </div>
+            <div className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm">
+              <span className="text-slate-400 block uppercase text-[11px] font-bold tracking-widest">Location Confidence</span>
+              <div className="mt-1.5">
+                {sale.coordinateConfidence != null ? (
+                  <CoordinateConfidenceBadge
+                    confidence={sale.coordinateConfidence}
+                    errorMeters={sale.coordinateErrorMeters}
+                  />
+                ) : (
+                  <span className="font-bold text-slate-400">Not Geocoded</span>
+                )}
+              </div>
             </div>
           </div>
 

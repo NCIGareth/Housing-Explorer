@@ -27,6 +27,7 @@ import { parse } from "csv-parse";
 import { propertySaleSchema } from "@housing/shared";
 import { logError, logInfo } from "../lib/logger";
 import { estimateRoutingKey, routingKeyCoordinates } from "../lib/eircode-heuristics";
+import { computeCoordinateConfidence, getErrorByRoutingKey } from "../lib/geocode-confidence";
 import { geocodeRow, fetchCountyViewboxes, type Throttle } from "../lib/geocode";
 import pLimit from "p-limit";
 import type { PrismaClient } from "@housing/db";
@@ -267,6 +268,16 @@ async function cleanRow(raw: Record<string, string>) {
     estimatedLongitude = routingKeyCoordinates[estimatedEircode].lon;
   }
 
+  const { confidence: coordinateConfidence, errorMeters: coordinateErrorMeters } = computeCoordinateConfidence({
+    latitude: coords.lat,
+    longitude: coords.lon,
+    estimatedLatitude,
+    estimatedLongitude,
+    estimatedEircode,
+    address,
+    errorByRoutingKey: await getErrorByRoutingKey(prisma),
+  });
+
   const data = {
     sourceKey: "", // Unique identifier for deduplication
     saleDate,
@@ -281,7 +292,9 @@ async function cleanRow(raw: Record<string, string>) {
     longitude: coords.lon,
     estimatedEircode,
     estimatedLatitude,
-    estimatedLongitude
+    estimatedLongitude,
+    coordinateConfidence,
+    coordinateErrorMeters
   };
 
   data.sourceKey = makeSourceKey(data);
@@ -299,6 +312,8 @@ async function processRow(record: PprCsvRow, retryCount = 0): Promise<{ id: stri
         estimatedEircode: cleaned.estimatedEircode ?? undefined,
         estimatedLatitude: cleaned.estimatedLatitude ?? undefined,
         estimatedLongitude: cleaned.estimatedLongitude ?? undefined,
+        coordinateConfidence: cleaned.coordinateConfidence ?? undefined,
+        coordinateErrorMeters: cleaned.coordinateErrorMeters ?? undefined,
       },
       create: cleaned,
     });

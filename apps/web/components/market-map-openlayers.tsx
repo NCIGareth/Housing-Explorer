@@ -9,7 +9,7 @@ import VectorSource from "ol/source/Vector";
 import ClusterSource from "ol/source/Cluster";
 import HeatmapLayer from "ol/layer/Heatmap";
 import { Feature } from "ol";
-import { Point } from "ol/geom";
+import { Point, Circle as GeomCircle } from "ol/geom";
 import { fromLonLat } from "ol/proj";
 import { Style, Icon, Circle, Fill, Stroke, Text } from "ol/style";
 import { boundingExtent } from "ol/extent";
@@ -27,8 +27,19 @@ export type PprPoint = {
   estimatedEircode?: string | null;
   estimatedLatitude?: number | null;
   estimatedLongitude?: number | null;
+  coordinateConfidence?: number | null;
+  coordinateErrorMeters?: number | null;
   descriptionOfProperty?: string | null;
 };
+
+function isEstimatedOnly(point: PprPoint) {
+  return (
+    point.latitude == null &&
+    point.longitude == null &&
+    point.estimatedLatitude != null &&
+    point.estimatedLongitude != null
+  );
+}
 
 function resolvePointCoords(point: PprPoint) {
   if (point.latitude != null && point.longitude != null) {
@@ -62,6 +73,11 @@ const MARKER_STYLE = (() => {
     }),
   });
 })();
+
+const ERROR_CIRCLE_STYLE = new Style({
+  fill: new Fill({ color: "rgba(245, 158, 11, 0.08)" }),
+  stroke: new Stroke({ color: "rgba(245, 158, 11, 0.55)", width: 1.5, lineDash: [6, 6] }),
+});
 
 const PRICE_TIER_COLORS = [
   { max: 200000, color: "#22c55e", label: "Under €200k" },
@@ -135,10 +151,13 @@ export const MarketMap: React.FC<{
   const mapInstance = useRef<OlMap | null>(null);
   const vectorSourceRef = useRef(new VectorSource());
   const boundarySourceRef = useRef(new VectorSource());
+  const circleSourceRef = useRef(new VectorSource());
   const dataLayerRef = useRef<VectorLayer | HeatmapLayer | null>(null);
+  const circleLayerRef = useRef<VectorLayer | null>(null);
   const viewModeRef = useRef(viewMode);
   viewModeRef.current = viewMode;
   const featureMapRef = useRef<Map<string, Feature<Point>>>(new Map());
+  const circleFeatureMapRef = useRef<Map<string, Feature<GeomCircle>>>(new Map());
 
   const [markerCount, setMarkerCount] = useState(0);
 
@@ -229,6 +248,38 @@ export const MarketMap: React.FC<{
     map.getLayers().insertAt(1, newLayer);
   }, []);
 
+  const updateErrorCircles = useCallback(() => {
+    const source = circleSourceRef.current;
+    const featureMap = circleFeatureMapRef.current;
+    const newIds = new Set(dataToUse.map((p) => p.id));
+
+    for (const [id, feature] of featureMap) {
+      if (!newIds.has(id)) {
+        source.removeFeature(feature);
+        featureMap.delete(id);
+      }
+    }
+
+    for (const point of dataToUse) {
+      const radius = point.coordinateErrorMeters;
+      if (!isEstimatedOnly(point) || radius == null || radius <= 0) continue;
+      const coords = resolvePointCoords(point);
+      if (!coords) continue;
+      const projectedRadius = radius / Math.cos((coords.lat * Math.PI) / 180);
+      const existing = featureMap.get(point.id);
+      if (existing) {
+        existing.setGeometry(new GeomCircle(fromLonLat([coords.lon, coords.lat]), projectedRadius));
+      } else {
+        const feature = new Feature({
+          geometry: new GeomCircle(fromLonLat([coords.lon, coords.lat]), projectedRadius),
+          point,
+        });
+        featureMap.set(point.id, feature);
+        source.addFeature(feature);
+      }
+    }
+  }, [dataToUse]);
+
   const updateMarkers = useCallback(() => {
     const vectorSource = vectorSourceRef.current;
     const map = mapInstance.current;
@@ -274,6 +325,8 @@ export const MarketMap: React.FC<{
 
     setMarkerCount(featureMap.size);
 
+    updateErrorCircles();
+
     if (!changed) return;
 
     rebuildBoundaries();
@@ -286,7 +339,7 @@ export const MarketMap: React.FC<{
         duration: 400,
       });
     }
-  }, [dataToUse, rebuildBoundaries]);
+  }, [dataToUse, rebuildBoundaries, updateErrorCircles]);
 
   /* ================= MAP INIT ================= */
 
@@ -312,6 +365,14 @@ export const MarketMap: React.FC<{
     });
 
     mapInstance.current = map;
+
+    const circleLayer = new VectorLayer({
+      source: circleSourceRef.current,
+      style: ERROR_CIRCLE_STYLE,
+    });
+    circleLayer.setVisible(viewModeRef.current === "points");
+    circleLayerRef.current = circleLayer;
+    map.getLayers().insertAt(1, circleLayer);
 
     swapDataLayer(map, vectorSourceRef.current, viewModeRef.current);
 
@@ -450,6 +511,7 @@ export const MarketMap: React.FC<{
     const map = mapInstance.current;
     if (!map) return;
     swapDataLayer(map, vectorSourceRef.current, viewMode);
+    circleLayerRef.current?.setVisible(viewMode === "points");
   }, [viewMode, swapDataLayer]);
 
   /* ================= UPDATE MARKERS WHEN DATA CHANGES ================= */
