@@ -20,10 +20,14 @@ const LINE_COLORS = [
 export const CompareChart = React.memo(function CompareChart({
   data,
   areas,
+  mode,
 }: {
   data: Array<Record<string, string | number>>;
   areas: string[];
+  mode: "index" | "median";
 }) {
+  const median = mode === "median";
+
   if (data.length === 0) {
     return (
       <div className="h-[400px] flex items-center justify-center bg-slate-50 rounded-lg border border-dashed text-slate-400 italic">
@@ -35,7 +39,11 @@ export const CompareChart = React.memo(function CompareChart({
   return (
     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
       <h3 className="text-lg font-bold text-slate-900 mb-1">Price Trend Comparison</h3>
-      <p className="text-sm text-slate-500 mb-4">Historical median / index values across selected areas</p>
+      <p className="text-sm text-slate-500 mb-4">
+        {median
+          ? "PPR median sale price (€, quarterly) across selected areas"
+          : "CSO Residential Property Price Index (2015 = 100) across selected counties"}
+      </p>
 
       <ResponsiveContainer width="100%" height={400}>
         <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
@@ -58,7 +66,7 @@ export const CompareChart = React.memo(function CompareChart({
           <Tooltip
             contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
             formatter={(value: number, name: string) => [
-              `€${Number(value).toLocaleString()}`,
+              median ? `€${Number(value).toLocaleString()}` : Number(value).toLocaleString(),
               name.replace(/_/g, " "),
             ]}
             labelStyle={{ fontWeight: "bold", marginBottom: "4px" }}

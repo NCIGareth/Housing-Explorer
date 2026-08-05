@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { isEircodeKey } from "./area";
 
 /** Universal check for Next.js build phase */
 const isBuildPhase = () => process.env.NEXT_PHASE === "phase-production-build";
@@ -498,6 +499,24 @@ export async function getSingleEircodeRoutingKeyStats(routingKey: string, county
   };
 }
 
+type PeriodSeries = Array<{ period: string; value: number }>;
+
+/** Merges one time series per area into rows keyed by period (missing periods stay undefined). */
+export function mergeSeriesByPeriod(rowsPerArea: PeriodSeries[], areas: string[]) {
+  const periodMap: Record<string, Record<string, number>> = {};
+  for (let i = 0; i < areas.length; i++) {
+    const key = areas[i].replace(/\s+/g, "_");
+    for (const row of rowsPerArea[i]) {
+      if (!periodMap[row.period]) periodMap[row.period] = {};
+      periodMap[row.period][key] = Number(row.value);
+    }
+  }
+
+  return Object.entries(periodMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([period, values]) => ({ period, ...values }));
+}
+
 export async function getMultiHistoricalSeries(areas: string[]) {
   if (isBuildPhase()) return { merged: [], areas: [] };
   if (areas.length === 0) return { merged: [], areas: [] };
@@ -512,7 +531,7 @@ export async function getMultiHistoricalSeries(areas: string[]) {
     )
   );
 
-  const pprFallbacks: Promise<Array<{ period: string; value: number }>>[] = [];
+  const pprFallbacks: Promise<PeriodSeries>[] = [];
   for (let i = 0; i < areas.length; i++) {
     if (csoResults[i].length === 0) {
       pprFallbacks.push(getPprMedianPriceByMonth({ counties: [areas[i]] }));
@@ -523,21 +542,38 @@ export async function getMultiHistoricalSeries(areas: string[]) {
 
   const pprResults = await Promise.all(pprFallbacks);
 
-  const periodMap: Record<string, Record<string, number>> = {};
-  for (let i = 0; i < areas.length; i++) {
-    const key = areas[i].replace(/\s+/g, "_");
-    const rows = csoResults[i].length > 0 ? csoResults[i] : pprResults[i];
-    for (const row of rows) {
-      if (!periodMap[row.period]) periodMap[row.period] = {};
-      periodMap[row.period][key] = Number(row.value);
-    }
-  }
+  const rowsPerArea = csoResults.map((rows, i) => (rows.length > 0 ? rows : pprResults[i]));
 
-  const merged = Object.entries(periodMap)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([period, values]) => ({ period, ...values }));
+  return { merged: mergeSeriesByPeriod(rowsPerArea, areas), areas };
+}
 
-  return { merged, areas };
+/**
+ * Quarterly PPR median sale price (EUR) per area.
+ * Areas may be county names or eircode routing keys (e.g. "D20", "A94") —
+ * routing keys are matched against eircode / estimated eircode prefixes.
+ */
+export async function getMultiMedianSeries(areas: string[]) {
+  if (isBuildPhase()) return { merged: [], areas: [] };
+  if (areas.length === 0) return { merged: [], areas: [] };
+  const prisma = await getDb();
+
+  const results = await Promise.all(
+    areas.map((area) => {
+      const filter = isEircodeKey(area)
+        ? Prisma.sql`SUBSTRING(COALESCE(eircode, "estimatedEircode"), 1, 3) = ${area}`
+        : Prisma.sql`county = ${area}`;
+      return prisma.$queryRaw<PeriodSeries>`
+        SELECT to_char(date_trunc('quarter', "saleDate"), 'YYYY-MM') AS period,
+               (percentile_cont(0.5) WITHIN GROUP (ORDER BY "priceEur"::float))::float AS value
+        FROM "PropertySale"
+        WHERE ${filter}
+        GROUP BY date_trunc('quarter', "saleDate")
+        ORDER BY date_trunc('quarter', "saleDate")
+      `;
+    })
+  );
+
+  return { merged: mergeSeriesByPeriod(results, areas), areas };
 }
 
 export type SearchResult = {

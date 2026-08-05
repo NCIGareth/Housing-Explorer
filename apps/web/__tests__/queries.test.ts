@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
-import { buildPprFilterWhere } from "@/lib/queries";
+import { buildPprFilterWhere, mergeSeriesByPeriod } from "@/lib/queries";
+import { isEircodeKey } from "@/lib/area";
 
 describe("Query helpers (unit)", () => {
   describe("buildPprFilterWhere", () => {
@@ -92,6 +93,61 @@ describe("Query helpers (unit)", () => {
     it("generates correct limit", () => {
       const result = buildSearchQuery("test", 50);
       expect(result!.sql).toContain("LIMIT 50");
+    });
+  });
+
+  describe("isEircodeKey", () => {
+    it("accepts Dublin routing keys", () => {
+      expect(isEircodeKey("D01")).toBe(true);
+      expect(isEircodeKey("D20")).toBe(true);
+      expect(isEircodeKey("D6")).toBe(true);
+    });
+
+    it("accepts two-char county routing keys", () => {
+      expect(isEircodeKey("A94")).toBe(true);
+      expect(isEircodeKey("K78")).toBe(true);
+      expect(isEircodeKey("X91")).toBe(true);
+    });
+
+    it("rejects county names and other input", () => {
+      expect(isEircodeKey("Dublin")).toBe(false);
+      expect(isEircodeKey("Cork")).toBe(false);
+      expect(isEircodeKey("")).toBe(false);
+      expect(isEircodeKey("D20A")).toBe(false);
+      expect(isEircodeKey("DD")).toBe(false);
+      expect(isEircodeKey("6D")).toBe(false);
+    });
+  });
+
+  describe("mergeSeriesByPeriod", () => {
+    it("aligns two areas on shared periods", () => {
+      const merged = mergeSeriesByPeriod(
+        [
+          [{ period: "2024-04", value: 450000 }, { period: "2024-07", value: 460000 }],
+          [{ period: "2024-04", value: 420000 }],
+        ],
+        ["Dublin", "D20"]
+      );
+      expect(merged).toEqual([
+        { period: "2024-04", Dublin: 450000, D20: 420000 },
+        { period: "2024-07", Dublin: 460000 },
+      ]);
+    });
+
+    it("converts spaces in area names to underscores", () => {
+      const merged = mergeSeriesByPeriod(
+        [[{ period: "2024-04", value: 100 }]],
+        ["North Dublin"]
+      );
+      expect(merged[0]).toEqual({ period: "2024-04", North_Dublin: 100 });
+    });
+
+    it("sorts periods ascending", () => {
+      const merged = mergeSeriesByPeriod(
+        [[{ period: "2023-10", value: 1 }, { period: "2024-01", value: 2 }]],
+        ["Dublin"]
+      );
+      expect(merged.map((r) => r.period)).toEqual(["2023-10", "2024-01"]);
     });
   });
 
