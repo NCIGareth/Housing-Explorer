@@ -10,6 +10,7 @@
     "ppr:enrich:eircodes": "tsx src/jobs/populate-eircodes.ts",
     "ppr:enrich:coords": "tsx src/jobs/recover-coordinates.ts",
     "ppr:regeocode": "tsx src/jobs/regeocode.ts",
+    "ppr:backfill": "tsx src/scripts/backfill-estimates.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

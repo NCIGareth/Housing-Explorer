@@ -3,75 +3,85 @@ import * as dotenv from "dotenv";
 
 dotenv.config({ path: resolve(process.cwd(), ".env") });
 
-import { PrismaClient, PropertySale } from "@housing/db";
+import { PrismaClient, Prisma, PropertySale } from "@housing/db";
 import { estimateRoutingKey, routingKeyCoordinates } from "../lib/eircode-heuristics";
 
 const prisma = new PrismaClient();
 
-async function main() {
-  console.log("Starting backfill for missing coordinates and Eircodes...");
+const BATCH_SIZE = 500;
+const BATCH_DELAY_MS = 100;
 
-  let processedCount = 0;
-  let updatedCount = 0;
-  const batchSize = 1000;
-  let hasMore = true;
-  let cursor: string | undefined = undefined;
+function estimateFor(property: PropertySale): {
+  estimatedEircode: string | null;
+  estimatedLatitude: number | null;
+  estimatedLongitude: number | null;
+} {
+  const estimatedEircode = property.eircode
+    ? property.eircode.slice(0, 3).toUpperCase()
+    : estimateRoutingKey(property.address, property.county);
 
-  while (hasMore) {
-    const properties: PropertySale[] = await prisma.propertySale.findMany({
-      where: {
-        OR: [
-          { eircode: null },
-          { latitude: null },
-          { longitude: null }
-        ]
-      },
-      take: batchSize,
-      skip: cursor ? 1 : 0,
-      cursor: cursor ? { id: cursor } : undefined,
-      orderBy: { id: 'asc' }
-    });
+  let estimatedLatitude: number | null = null;
+  let estimatedLongitude: number | null = null;
 
-    if (properties.length === 0) {
-      hasMore = false;
-      break;
-    }
-
-    cursor = properties[properties.length - 1].id;
-
-    for (const property of properties) {
-      processedCount++;
-
-      let estimatedEircode = property.eircode ? property.eircode.slice(0, 3).toUpperCase() : estimateRoutingKey(property.address, property.county);
-      let estimatedLatitude = null;
-      let estimatedLongitude = null;
-
-      if (estimatedEircode && routingKeyCoordinates[estimatedEircode]) {
-        estimatedLatitude = routingKeyCoordinates[estimatedEircode].lat;
-        estimatedLongitude = routingKeyCoordinates[estimatedEircode].lon;
-      }
-
-      if (estimatedEircode || estimatedLatitude || estimatedLongitude) {
-        await prisma.propertySale.update({
-          where: { id: property.id },
-          data: {
-            estimatedEircode: estimatedEircode ?? undefined,
-            estimatedLatitude: estimatedLatitude ?? undefined,
-            estimatedLongitude: estimatedLongitude ?? undefined,
-          }
-        });
-        updatedCount++;
-        // Throttle updates to prevent connection pool exhaustion on the live site
-        await new Promise(r => setTimeout(r, 10));
-      }
-
-      if (processedCount % 1000 === 0) {
-        console.log(`Processed ${processedCount} records, Updated ${updatedCount} records so far...`);
-      }
-    }
+  if (estimatedEircode && routingKeyCoordinates[estimatedEircode]) {
+    estimatedLatitude = routingKeyCoordinates[estimatedEircode].lat;
+    estimatedLongitude = routingKeyCoordinates[estimatedEircode].lon;
   }
 
-  console.log(`Backfill complete. Processed ${processedCount} total records. Updated ${updatedCount} records.`);
+  return { estimatedEircode, estimatedLatitude, estimatedLongitude };
+}
+
+async function main() {
+  console.log("Starting backfill of estimated eircodes/coordinates...");
+
+  let processed = 0;
+  let updated = 0;
+  let cursor: string | undefined = undefined;
+
+  while (true) {
+    const properties: PropertySale[] = await prisma.propertySale.findMany({
+      where: {
+        OR: [{ estimatedLatitude: null }, { estimatedEircode: null }],
+      },
+      take: BATCH_SIZE,
+      skip: cursor ? 1 : 0,
+      cursor: cursor ? { id: cursor } : undefined,
+      orderBy: { id: "asc" },
+    });
+
+    if (properties.length === 0) break;
+    cursor = properties[properties.length - 1].id;
+
+    const updates: Prisma.PrismaPromise<PropertySale>[] = [];
+    for (const property of properties) {
+      processed++;
+      const estimate = estimateFor(property);
+      if (!estimate.estimatedEircode && !estimate.estimatedLatitude) continue;
+      updates.push(
+        prisma.propertySale.update({
+          where: { id: property.id },
+          data: {
+            estimatedEircode: estimate.estimatedEircode,
+            estimatedLatitude: estimate.estimatedLatitude,
+            estimatedLongitude: estimate.estimatedLongitude,
+          },
+        }),
+      );
+      updated++;
+    }
+
+    if (updates.length > 0) {
+      await prisma.$transaction(updates);
+    }
+
+    if (processed % 5000 === 0 || properties.length < BATCH_SIZE) {
+      console.log(`Processed ${processed}, updated ${updated} so far...`);
+    }
+
+    await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
+  }
+
+  console.log(`Backfill complete. Processed ${processed} total records. Updated ${updated} records.`);
 }
 
 main()

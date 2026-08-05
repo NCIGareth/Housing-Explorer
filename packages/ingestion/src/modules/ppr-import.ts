@@ -27,6 +27,7 @@ import { parse } from "csv-parse";
 import { propertySaleSchema } from "@housing/shared";
 import { logError, logInfo } from "../lib/logger";
 import { estimateRoutingKey, routingKeyCoordinates } from "../lib/eircode-heuristics";
+import { geocodeRow, fetchCountyViewboxes, type Throttle } from "../lib/geocode";
 import pLimit from "p-limit";
 import type { PrismaClient } from "@housing/db";
 import { refreshMedianPriceCache } from "../jobs/refresh-median-price-cache";
@@ -172,6 +173,40 @@ function makeSourceKey(row: { saleDate: Date; address: string; priceEur: number 
 const NOMINATIM_URL = process.env.NOMINATIM_URL || "http://localhost:8080";
 const isPublicApi = NOMINATIM_URL.includes("nominatim.openstreetmap.org");
 let lastGeocodeRequest = 0;
+const countyViewboxCache = new Map<string, string | undefined>();
+let countyViewboxPromise: Promise<Map<string, string>> | null = null;
+
+const geocodeThrottle: Throttle = isPublicApi
+  ? async () => {
+      const elapsed = Date.now() - lastGeocodeRequest;
+      if (elapsed < 1100) await new Promise(r => setTimeout(r, 1100 - elapsed));
+      lastGeocodeRequest = Date.now();
+    }
+  : async () => {};
+
+async function getCountyViewboxes(): Promise<Map<string, string>> {
+  if (!countyViewboxPromise) {
+    countyViewboxPromise = (async () => {
+      try {
+        const counties = await prisma.$queryRaw<Array<{ county: string }>>`
+          SELECT DISTINCT county FROM "PropertySale" WHERE county IS NOT NULL
+        `;
+        return await fetchCountyViewboxes(counties.map((r) => r.county));
+      } catch {
+        return new Map<string, string>();
+      }
+    })();
+  }
+  return countyViewboxPromise;
+}
+
+async function viewboxForCounty(county: string): Promise<string | undefined> {
+  if (countyViewboxCache.has(county)) return countyViewboxCache.get(county);
+  const all = await getCountyViewboxes();
+  const box = all.get(county);
+  countyViewboxCache.set(county, box);
+  return box;
+}
 
 async function fetchCoordinates(eircode?: string, address?: string, county?: string) {
   const cacheKey = eircode || `${address}-${county}`;
@@ -184,55 +219,20 @@ async function fetchCoordinates(eircode?: string, address?: string, county?: str
       ? { "User-Agent": "IrelandHousingExplorer/1.0 (github.com/your-org/housing)" }
       : {};
 
-    if (isPublicApi) {
-      const elapsed = Date.now() - lastGeocodeRequest;
-      if (elapsed < 1100) await new Promise(r => setTimeout(r, 1100 - elapsed));
-    }
-
     if (eircode) {
+      await geocodeThrottle();
       const res = await fetch(`${NOMINATIM_URL}/search?postalcode=${encodeURIComponent(eircode)}&countrycodes=ie&format=json&limit=1`, { headers });
-      lastGeocodeRequest = Date.now();
       const data = await res.json() as NominatimResult[];
       if (data.length > 0) {
         result = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), precision: 'EXACT' };
       }
     }
 
-    if (!result.lat && address) {
-      const parts = address.split(",").map((p) => p.trim()).filter(Boolean);
-      const street = parts[0] ?? "";
-      const city = parts.length > 1 ? parts.slice(1).join(", ") : "";
-
-      // Level 1: structured query (more deterministic than free-form q=)
-      if (street) {
-        if (isPublicApi) {
-          const elapsed = Date.now() - lastGeocodeRequest;
-          if (elapsed < 1100) await new Promise(r => setTimeout(r, 1100 - elapsed));
-        }
-        const sp = new URLSearchParams({ format: "jsonv2", limit: "1", countrycodes: "ie", layer: "address" });
-        sp.set("street", street);
-        if (city) sp.set("city", city);
-        if (county) sp.set("county", county);
-        const sres = await fetch(`${NOMINATIM_URL}/search?${sp}`, { headers });
-        lastGeocodeRequest = Date.now();
-        const sdata = await sres.json() as NominatimResult[];
-        if (sdata.length > 0) {
-          result = { lat: parseFloat(sdata[0].lat), lon: parseFloat(sdata[0].lon), precision: 'EXACT' };
-        }
-      }
-
-      // Level 2: free-form fallback
-      if (!result.lat) {
-        if (isPublicApi) {
-          const elapsed = Date.now() - lastGeocodeRequest;
-          if (elapsed < 1100) await new Promise(r => setTimeout(r, 1100 - elapsed));
-        }
-        const res = await fetch(`${NOMINATIM_URL}/search?q=${encodeURIComponent(`${address}, ${county}, Ireland`)}&format=json&limit=1`, { headers });
-        lastGeocodeRequest = Date.now();
-        const data = await res.json() as NominatimResult[];
-        if (data.length > 0) {
-          result = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), precision: 'EXACT' };
-        }
+    if (!result.lat && address && county) {
+      const viewbox = await viewboxForCounty(county);
+      const coords = await geocodeRow(address, county, viewbox, geocodeThrottle, headers);
+      if (coords.lat && coords.lon) {
+        result = { lat: coords.lat, lon: coords.lon, precision: 'EXACT' };
       }
     }
   } catch (e) {

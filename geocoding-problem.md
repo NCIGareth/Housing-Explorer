@@ -1,56 +1,77 @@
 # The Geocoding Problem
 
-Status as of 2026-08-04. All numbers refer to the self-hosted database
-(`housing-db`, fresh import) unless noted. Dataset: 701,890 PPR property sales,
+Status as of 2026-08-05. All numbers refer to the self-hosted database
+(`housing-db`) unless noted. Dataset: 701,890 PPR property sales,
 2014-01-02 → 2026-07-24.
 
 ## What we solved
 
 ### Eircode coverage
-- **Exact eircode: 41.0% (287,621 rows)** — better than production's 33.8%.
+- **Exact eircode: 41.9% (293,861 rows)** — better than production's 33.8%.
   Achieved by exact address matching in `populate-eircodes.ts` (+44,911 rows on
-  top of what PPR already supplies).
-- **Exact *or* estimated eircode: 64.2%** (vs 63.9% production). Estimated
-  eircodes come from routing-key heuristics (`estimateRoutingKey` +
-  `routingKeyCoordinates` in `packages/ingestion/src/lib/eircode-heuristics.ts`).
+  top of what PPR already supplies) plus a later spatial re-match after the
+  re-geocode pass (+6,240 eircodes).
+- **Exact *or* estimated eircode: 96.1% (674,434 rows)**. Estimated eircodes
+  come from routing-key heuristics (`estimateRoutingKey` +
+  `routingKeyCoordinates` in `packages/ingestion/src/lib/eircode-heuristics.ts`),
+  now data-driven (see "Routing-key expansion" below).
 
 ### Coordinate coverage
-- **Exact coordinates: 29.3% (205,807 rows)**.
-- **Any coordinates usable for the map: 93.5% (~450,296 rows)** — the map falls
-  back to estimated-coordinate centroids for the rest.
-- Coordinate recovery (`recover-coordinates.ts`): **193 address-mirror** +
-  **410 eircode-mirror** rows recovered.
+- **Exact coordinates: 64.7% (454,175 rows)** — up from 29.3% thanks to the
+  re-geocode pass (248,072 rows geocoded).
+- **Any coordinates usable for the map: 96.1% (674,363 rows)** — the map falls
+  back to estimated-coordinate routing-key centroids for the rest.
+- Coordinate recovery (`recover-coordinates.ts`): **11 address-mirror** +
+  **273 eircode-mirror** rows recovered.
 
 ### Geocoding infrastructure
 - Local Nominatim (`housing-nominatim`, Ireland OSM extract) is fast:
   ~9 ms on cache hit, ~74 ms for 10 concurrent cold queries.
-- Structured-query geocoding added as the primary path — `street` + `city` +
+- Structured-query geocoding is the primary path — `street` + `city` +
   `county` + `countrycodes=ie` + `layer=address`, plus `viewbox`/`bounded` per
-  county. This replaces the old free-form `q=`-only approach as the documented,
-  more deterministic strategy (Nominatim 5.3.2 search docs).
+  county. Shared by the import path and the re-geocoder via
+  `packages/ingestion/src/lib/geocode.ts` (single 4-level cascade + LRU cache).
 - A re-geocoding job (`regeocode.ts`) processes every row missing coordinates:
   LRU cache (150k), 25 concurrent requests, keyset pagination, and a free-form
   `q=` fallback.
 
-## Gaps (as of 2026-08-04)
+## Routing-key expansion (done)
+
+The old `eircode-heuristics.ts` hardcoded **32 towns**. The new data-driven
+generator (`packages/ingestion/src/scripts/generate-routing-keys.ts`) derives
+everything from the ground-truth DB:
+
+- **248 routing-key centroids** (averaged from rows with exact eircode + coords)
+  vs the previous 139-key static list.
+- **6,124 locality → routing-key entries across 26 counties**, mined from the
+  293,861 exact-eircode rows (last non-county address token, per-county
+  dominant-routing-key with ≥ 60% share and ≥ 2 rows; street-suffixed tokens
+  excluded; county-name towns like "Cork"/"Limerick" recovered via a fallback).
+- `estimateRoutingKey` now scans comma tokens (last → first) against the
+  per-county map, strips trailing qualifiers ("Cork City" → "Cork"), and keeps
+  Dublin postal-district handling.
+- Backfill (`packages/ingestion/src/scripts/backfill-estimates.ts`) ran as a
+  detached container on the server: **251,153 rows processed, 224,138 updated
+  (89% hit rate)**, lifting estimated-coordinate/eircode coverage from 64.2% →
+  96.1%. `VACUUM ANALYZE` ran after.
+
+## Gaps (as of 2026-08-05)
 
 | Gap | Size | Why it's stuck |
 |-----|------|----------------|
-| Rows with eircode but **no coordinates** | **194,070** | One subset of the ~496k rows missing coords that `regeocode.ts` is targeting |
-| Rows with coordinates but **no eircode** | **126,150** | Spatial eircode recovery requires a seeded `VerifiedEircodeMap`, which needs the licensed dataset |
-| Eircode mirroring | exhausted (only 410 recoverable) | Eircodes are ~unique, so "copy coords from another row with the same eircode" can't help |
-| Centroid fallback | 0 rows | `internal_geo_reference` is empty — nothing to fall back to |
-| `VerifiedEircodeMap` | 0 rows (empty) | Table + geom/GIST index exist (created by `20260512_create_verified_eircode_map` / `_fix_` migrations, also `CREATE TABLE IF NOT EXISTS` in code) but was never seeded |
+| Rows with **no coordinates at all** (exact or estimated) | **~27.5k (3.9%)** | Mostly apartment/estate complexes where the town is buried mid-token (e.g. "Apartment 204, Pier Head, Allins Quay Youghal"); no Nominatim match, no routing-key token |
+| Rows with coordinates but **no exact eircode** | ~380k | Spatial eircode recovery requires a seeded `VerifiedEircodeMap`, which needs the licensed dataset |
+| Exact eircode coverage ceiling | 41.9% | ECAF/ECAD (2.2M points) is paid/proprietary — the only way past this |
+| `VerifiedEircodeMap` | 0 rows (empty) | Table + geom/GIST index exist but was never seeded |
 
 ### The map of what data each row can have
 
 ```
               +---- has eircode ----+      +-- has coords --+
-  701,890     |   287,621 exact     |      |   205,807 exact |
-   rows       |    +~163k estimated |      |   ~244k est.    |
+  701,890     |   293,861 exact     |      |   454,175 exact |
+   rows       |   +380,573 est.     |      |   220,188 est.  |
               |                     |      |                 |
-              194,070 w/ eircode, no coords  → regeocode.ts
-              126,150 w/ coords, no eircode  → blocked (needs paid data)
+              |   27,456 none       |      |    27,527 none  |
 ```
 
 ## What we tried and failed at
@@ -72,37 +93,32 @@ Status as of 2026-08-04. All numbers refer to the self-hosted database
 5. **Free-form `q=` geocoding** (the original `ppr-import.ts` approach):
    order-dependent and unreliable — "123 Main St, Town, Co. Cork" matching
    depends on token order and often returns the wrong settlement or nothing.
-6. **Coordinate mirroring** (`recover-coordinates.ts`, eircode-mirror path):
-   only 410 recoverable because eircodes are effectively unique per row.
-7. **Centroid fallback** (county/town centroid): 0 rows — the reference data it
+6. **`layer=address` on everything**: matches street addresses only, not
+   townlands — the first re-geocode attempt recovered ~0%.
+7. **Coordinate mirroring** (`recover-coordinates.ts`, eircode-mirror path):
+   only 273 recoverable because eircodes are effectively unique per row.
+8. **Centroid fallback** (county/town centroid): 0 rows — the reference data it
    would fall back to is empty, so it is effectively dead code.
-
-## In progress / next steps
-
-- **`regeocode.ts`** — structured re-geocoding of the ~496k rows missing
-  coordinates. Four-level fallback cascade, each scoped by county `viewbox` +
-  `bounded`: L1 structured `street/city/county` (`layer=address`), L2 free-form
-  full address, L3 free-form first-part + county (the rural-townland winner),
-  L4 free-form bare first part (bounded to the county). The first attempt
-  (structured + full-address free-form only, `layer=address` on everything)
-  recovered ~0%; the shortened county-suffix fallbacks lifted the hit rate to
-  ~47% (943/2000 on the first batch). Job running detached on the server
-  (`scripts/regeocode.ps1` to start/logs/stop); expected to run several hours.
-- **Re-run `ingest:enrich`** after re-geocoding, so address matching can recover
-  more eircodes from newly obtained coordinates.
-- **Routing-key expansion (deferred)** — build a locality→routing-key map from
-  the 287,621 exact-eircode rows to improve estimated-eircode coverage from
-  64% → an estimated 85–90%. All 139 routing keys are covered by existing data.
 
 ## Key files
 
-- `packages/ingestion/src/jobs/regeocode.ts` — structured re-geocoder (new)
+- `packages/ingestion/src/lib/geocode.ts` — shared 4-level geocode cascade
+  (L1 structured `street/city/county` + `layer=address`; L2 free-form full
+  address; L3 first-part + county — the rural-townland winner; L4 bare first
+  part, all county-`viewbox`-bounded) + LRU cache + throttle
+- `packages/ingestion/src/jobs/regeocode.ts` — re-geocoder (completed:
+  496,071 processed, 248,072 geocoded)
+- `packages/ingestion/src/scripts/generate-routing-keys.ts` — data-driven
+  routing-key centroid + locality map generator
+- `packages/ingestion/src/scripts/backfill-estimates.ts` — batched backfill of
+  `estimatedEircode`/`estimatedLatitude`/`estimatedLongitude` (keyset
+  pagination, transactional batches)
 - `packages/ingestion/src/modules/ppr-import.ts` — import-time geocoding
-  (`fetchCoordinates`), now structured-first
+  (`fetchCoordinates`), now structured-first via `geocode.ts`
 - `packages/ingestion/src/jobs/populate-eircodes.ts` — exact address-match
   eircode enrichment + `VerifiedEircodeMap` spatial fallback
-- `packages/ingestion/src/jobs/recover-coordinates.ts` — coordinate mirroring /
-  centroid fallback
-- `packages/ingestion/src/lib/eircode-heuristics.ts` — routing-key estimation
+- `packages/ingestion/src/lib/eircode-heuristics.ts` — generated routing-key
+  estimation (248 centroids, 6,124 localities, `estimateRoutingKey`)
+- `scripts/regeocode.ps1` — server job launcher/monitor (start/logs/stop)
 - `packages/db/prisma/migrations/20260512_create_verified_eircode_map/` and
   `20260512_fix_verified_eircode_map/` — `VerifiedEircodeMap` table + geom/GIST
