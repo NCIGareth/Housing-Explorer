@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCapacityMb } from "@/lib/db-capacity";
 
 export async function GET() {
   try {
@@ -13,7 +14,8 @@ export async function GET() {
     `;
 
     const totalMb = Math.round(Number(dbInfo[0]?.totalBytes ?? 0) / (1024 * 1024));
-    const pctUsed = Math.round((totalMb / 500) * 100);
+    const capacityMb = getCapacityMb();
+    const pctUsed = Math.round((totalMb / capacityMb) * 100);
 
     const adminEmails = (process.env.ADMIN_EMAILS || "").split(",").map((s) => s.trim()).filter(Boolean);
 
@@ -22,9 +24,9 @@ export async function GET() {
         to: adminEmails[0],
         subject: `⚠️ DB at ${pctUsed}% — Ireland Housing Explorer`,
         text: [
-          `Database is at ${totalMb} MB / 500 MB (${pctUsed}%).`,
+          `Database is at ${totalMb} MB / ${capacityMb} MB (${pctUsed}%).`,
           ``,
-          `Action: prune old records or increase database capacity.`,
+          `Action: on Supabase, prune the retention window (oldest years) or raise the plan; on self-hosted, enlarge the disk volume or set DB_CAPACITY_MB to match it.`,
           `Health: ${process.env.VERCEL_PROJECT_PRODUCTION_URL || "localhost"}/api/health`,
         ].join("\n"),
       });
@@ -32,7 +34,7 @@ export async function GET() {
 
     return NextResponse.json({
       sizeMb: totalMb,
-      capacityMb: 500,
+      capacityMb,
       pctUsed,
       alertSent: pctUsed >= 85 && adminEmails.length > 0,
     });

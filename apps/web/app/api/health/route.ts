@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCapacityMb } from "@/lib/db-capacity";
 
 export async function GET() {
   try {
@@ -22,14 +23,15 @@ export async function GET() {
 
     const totalBytes = dbInfo.reduce((sum, t) => sum + Number(t.totalBytes), 0);
     const totalMb = Math.round(totalBytes / (1024 * 1024));
-    const pctUsed = Math.round((totalMb / 500) * 100);
+    const capacityMb = getCapacityMb();
+    const pctUsed = Math.round((totalMb / capacityMb) * 100);
 
     return NextResponse.json({
       status: "healthy",
       timestamp: new Date().toISOString(),
       database: {
         sizeMb: totalMb,
-        capacityMb: 500,
+        capacityMb,
         pctUsed,
         tables: dbInfo.map((t) => ({
           name: t.tableName,

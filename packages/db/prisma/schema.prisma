@@ -30,7 +30,6 @@ model HistoricalMetric {
 
   @@unique([source, metric, geography, period])
   @@index([metric, geography, period])
-  @@index([geography])
 }
 
 model ListingCurrent {
@@ -135,13 +134,13 @@ model PropertySale {
   createdAt               DateTime @default(now())
   favouriteProperties     FavouriteProperty[]
 
-  @@index([isApartment])
-
   @@index([county, saleDate])
   @@index([saleDate, priceEur])
-  @@index([county, priceEur])
-  @@index([eircode])
   // @@index([address], type: Gin) — created via raw SQL migration 20260510_add_trigram_index (pg_trgm GIN index)
+  // PropertySale_eircode_trgm_idx / estimatedEircode trgm GIN, routing_key_idx and
+  // coordinateConfidence_idx are also raw-SQL-managed (20260512_add_query_indexes,
+  // 20260805_add_coordinate_confidence). isApartment has no index — a boolean at
+  // ~6% selectivity is never worth a btree (dropped 20260806_drop_unused_indexes).
 }
 
 model MedianPriceCache {

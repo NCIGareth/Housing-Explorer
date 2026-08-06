@@ -35,18 +35,19 @@ Provides system health status and database size metrics.
   "status": "healthy",
   "timestamp": "2024-01-01T00:00:00.000Z",
   "database": {
-    "sizeMb": 271,
-    "capacityMb": 500,
-    "pctUsed": 54,
+    "sizeMb": 984,
+    "capacityMb": 51200,
+    "pctUsed": 2,
     "tables": [
-      { "name": "PropertySale", "rows": 701890, "sizeMb": 120 }
+      { "name": "PropertySale", "rows": 701890, "sizeMb": 901 }
     ]
   }
 }
 ```
 
 **Notes:**
-- Reports total DB size vs the 500 MB capacity, plus the 10 largest tables
+- Reports total DB size vs the configured capacity, plus the 10 largest tables
+- `capacityMb` comes from `DB_CAPACITY_MB` (env). Unset: 500 for `.supabase.co` URLs (free tier), 51200 for self-hosted
 - Used by the weekly DB size monitor (`/api/monitor`) and the E2E health smoke test
 
 **Response (503 - Unhealthy):**
@@ -475,20 +476,21 @@ Delete an alert.
 
 #### GET /api/monitor
 
-Weekly cron that reports database size and emails the admin when usage exceeds 85% of the 500 MB capacity.
+Weekly cron that reports database size and emails the admin when usage exceeds 85% of the configured capacity.
 
 **Authentication:** None (cron invoked from the production host)
 
 **Notes:**
 - Emails `ADMIN_EMAILS` via Resend only when `pctUsed >= 85` and the variable is set
+- `capacityMb` comes from `DB_CAPACITY_MB` (env). Unset: 500 for `.supabase.co` URLs (free tier), 51200 for self-hosted
 - Triggered every Monday at 12:00 UTC by a crontab entry on the production host
 
 **Response (200):**
 ```json
 {
-  "sizeMb": 271,
-  "capacityMb": 500,
-  "pctUsed": 54,
+  "sizeMb": 984,
+  "capacityMb": 51200,
+  "pctUsed": 2,
   "alertSent": false
 }
 ```

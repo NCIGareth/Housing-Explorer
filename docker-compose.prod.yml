@@ -72,6 +72,7 @@ services:
       SMTP_PASS: ${SMTP_PASS:-}
       UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL:-}
       UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN:-}
+      DB_CAPACITY_MB: ${DB_CAPACITY_MB:-51200}
     ports:
       - "3000:3000"
     depends_on:
