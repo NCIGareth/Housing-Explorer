@@ -51,7 +51,7 @@ export default function ProfilePage() {
   }
 
   if (authLoading) {
-    return <div className="max-w-lg mx-auto px-4 py-12"><p className="text-slate-500">Loading...</p></div>;
+    return <div className="max-w-lg mx-auto px-4 py-12"><p className="text-slate-500">Loading…</p></div>;
   }
 
   return (

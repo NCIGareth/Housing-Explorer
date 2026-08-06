@@ -28,6 +28,7 @@ import { propertySaleSchema } from "@housing/shared";
 import { logError, logInfo } from "../lib/logger";
 import { estimateRoutingKey, routingKeyCoordinates } from "../lib/eircode-heuristics";
 import { computeCoordinateConfidence, getErrorByRoutingKey } from "../lib/geocode-confidence";
+import { isApartmentAddress } from "../lib/housing-type";
 import { geocodeRow, fetchCountyViewboxes, type Throttle } from "../lib/geocode";
 import pLimit from "p-limit";
 import type { PrismaClient } from "@housing/db";
@@ -294,7 +295,8 @@ async function cleanRow(raw: Record<string, string>) {
     estimatedLatitude,
     estimatedLongitude,
     coordinateConfidence,
-    coordinateErrorMeters
+    coordinateErrorMeters,
+    isApartment: isApartmentAddress(address),
   };
 
   data.sourceKey = makeSourceKey(data);
@@ -314,6 +316,7 @@ async function processRow(record: PprCsvRow, retryCount = 0): Promise<{ id: stri
         estimatedLongitude: cleaned.estimatedLongitude ?? undefined,
         coordinateConfidence: cleaned.coordinateConfidence ?? undefined,
         coordinateErrorMeters: cleaned.coordinateErrorMeters ?? undefined,
+        isApartment: cleaned.isApartment ?? undefined,
       },
       create: cleaned,
     });

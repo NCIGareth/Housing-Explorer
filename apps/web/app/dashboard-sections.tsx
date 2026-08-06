@@ -21,6 +21,7 @@ type FilterParams = {
   endDate?: Date;
   notFullMarketPrice?: boolean;
   vatExclusive?: boolean;
+  housingType?: "house" | "apartment";
   page: number;
   pageSize: number;
 };
@@ -37,6 +38,7 @@ function buildQueryParams(p: FilterParams) {
     endDate: p.endDate,
     notFullMarketPrice: p.notFullMarketPrice ? true : undefined,
     vatExclusive: p.vatExclusive ? true : undefined,
+    housingType: p.housingType,
   };
 }
 

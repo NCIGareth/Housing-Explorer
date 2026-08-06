@@ -36,7 +36,7 @@ const steps = [
   {
     title: "6. Put it on a map",
     kid: "Finally, we put everything on a nice-looking website with a map, charts, and filters so you can explore the data yourself.",
-    detail: "Next.js 15 frontend with OpenLayers map (4 view modes: Points, Heatmap, Clusters, Areas), Recharts for price index charts, and full-text search across 686,000+ transactions."
+    detail: "Next.js 15 frontend with OpenLayers map (4 view modes: Points, Heatmap, Clusters, Areas), Recharts for price index charts, and full-text search across 700,000+ transactions."
   }
 ];
 
@@ -97,7 +97,7 @@ export default function AboutPage() {
         </ul>
 
         <p className="text-sm text-slate-500">
-          Total records: <strong>686,000+</strong> property sales spanning{" "}
+          Total records: <strong>700,000+</strong> property sales spanning{" "}
           <strong>2014–present</strong>.{" "}
           <Link href="/" className="text-blue-600 hover:underline">
             Start exploring

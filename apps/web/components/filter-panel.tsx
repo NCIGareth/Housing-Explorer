@@ -16,6 +16,7 @@ type Props = {
   localities?: string[];
   notFullMarketPrice?: boolean;
   vatExclusive?: boolean;
+  housingType?: "house" | "apartment";
 };
 
 const COUNTY_GROUPS: Array<{ province: string; counties: string[] }> = [
@@ -35,6 +36,19 @@ const PRICE_PRESETS = [
   { label: "€500k - €1M", min: 500000, max: 1000000 },
   { label: "Over €1M", min: 1000000, max: "" },
 ];
+
+const DATE_PRESETS = [
+  { label: "Last 3 months", months: 3 },
+  { label: "Last 6 months", months: 6 },
+  { label: "Last 9 months", months: 9 },
+  { label: "Last 12 months", months: 12 },
+];
+
+function monthsAgoISO(months: number): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() - months);
+  return d.toISOString().split("T")[0];
+}
 
 const labelStyle: React.CSSProperties = {
   display: "block",
@@ -66,11 +80,15 @@ export const FilterPanel = React.memo(function FilterPanel({
   endDate,
   localities,
   notFullMarketPrice,
-  vatExclusive
+  vatExclusive,
+  housingType
 }: Props) {
   const [minPrice, setMinPrice] = useState(minPriceEur?.toString() ?? "");
   const [maxPrice, setMaxPrice] = useState(maxPriceEur?.toString() ?? "");
   const [activePreset, setActivePreset] = useState<string | null>(null);
+  const [startDateState, setStartDateState] = useState(startDate ?? "");
+  const [endDateState, setEndDateState] = useState(endDate ?? "");
+  const [activeDatePreset, setActiveDatePreset] = useState<string | null>(null);
   const [localityText, setLocalityText] = useState((localities ?? []).join(", "));
   const [countyState, setCountyState] = useState<string[]>(counties);
   const [eircodeOptions, setEircodeOptions] = useState<MultiSelectOption[]>([]);
@@ -134,6 +152,22 @@ export const FilterPanel = React.memo(function FilterPanel({
     setActivePreset(null);
   }
 
+  function handleDatePresetClick(label: string, months: number) {
+    setActiveDatePreset(label);
+    setStartDateState(monthsAgoISO(months));
+    setEndDateState("");
+  }
+
+  function handleStartDateChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setStartDateState(e.target.value);
+    setActiveDatePreset(null);
+  }
+
+  function handleEndDateChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setEndDateState(e.target.value);
+    setActiveDatePreset(null);
+  }
+
   return (
     <section style={{ 
       backgroundColor: "#f8fafc", 
@@ -195,7 +229,8 @@ export const FilterPanel = React.memo(function FilterPanel({
               type="date" 
               id="startDate" 
               name="startDate" 
-              defaultValue={startDate ?? ""} 
+              value={startDateState}
+              onChange={handleStartDateChange}
               style={inputStyle} 
             />
           </div>
@@ -206,7 +241,8 @@ export const FilterPanel = React.memo(function FilterPanel({
               type="date" 
               id="endDate" 
               name="endDate" 
-              defaultValue={endDate ?? ""} 
+              value={endDateState}
+              onChange={handleEndDateChange}
               style={inputStyle} 
             />
           </div>
@@ -237,6 +273,43 @@ export const FilterPanel = React.memo(function FilterPanel({
               }}
               onMouseLeave={(e) => {
                 if (activePreset !== preset.label) {
+                  e.currentTarget.style.backgroundColor = "#fff";
+                }
+              }}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Date Presets */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
+          <span style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", color: "#64748b", letterSpacing: "0.5px" }}>
+            Quick date range
+          </span>
+          {DATE_PRESETS.map((preset: typeof DATE_PRESETS[0]) => (
+            <button
+              key={preset.label}
+              type="button"
+              onClick={() => handleDatePresetClick(preset.label, preset.months)}
+              style={{
+                padding: "6px 14px",
+                backgroundColor: activeDatePreset === preset.label ? "#2563eb" : "#fff",
+                color: activeDatePreset === preset.label ? "#fff" : "#334155",
+                border: activeDatePreset === preset.label ? "1px solid #2563eb" : "1px solid #e2e8f0",
+                borderRadius: "20px",
+                fontSize: "12px",
+                fontWeight: activeDatePreset === preset.label ? 700 : 500,
+                cursor: "pointer",
+                transition: "all 0.15s ease"
+              }}
+              onMouseEnter={(e) => {
+                if (activeDatePreset !== preset.label) {
+                  e.currentTarget.style.backgroundColor = "#f1f5f9";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeDatePreset !== preset.label) {
                   e.currentTarget.style.backgroundColor = "#fff";
                 }
               }}
@@ -284,6 +357,14 @@ export const FilterPanel = React.memo(function FilterPanel({
               <option value="">All Types</option>
               <option value="Second-Hand Dwelling house /Apartment">Second-Hand</option>
               <option value="New Dwelling house /Apartment">New Build</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="housingType" style={labelStyle}>Housing Type</label>
+            <select id="housingType" name="housingType" defaultValue={housingType ?? ""} style={inputStyle}>
+              <option value="">All Housing</option>
+              <option value="house">Houses</option>
+              <option value="apartment">Apartments / Flats</option>
             </select>
           </div>
         </div>

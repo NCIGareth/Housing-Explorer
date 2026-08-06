@@ -24,7 +24,7 @@ export async function GET() {
         text: [
           `Database is at ${totalMb} MB / 500 MB (${pctUsed}%).`,
           ``,
-          `Action: prune old records or upgrade Supabase plan.`,
+          `Action: prune old records or increase database capacity.`,
           `Health: ${process.env.VERCEL_PROJECT_PRODUCTION_URL || "localhost"}/api/health`,
         ].join("\n"),
       });

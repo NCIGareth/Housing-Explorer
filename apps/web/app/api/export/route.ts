@@ -51,12 +51,14 @@ export async function GET(req: Request) {
     const propertyType = url.searchParams.get("propertyType");
     const notFullMarketPrice = url.searchParams.get("notFullMarketPrice") === "on";
     const vatExclusive = url.searchParams.get("vatExclusive") === "on";
+    const housingTypeParam = url.searchParams.get("housingType");
 
     if (eircodes.length > 0) params.eircodes = eircodes;
     if (locality) params.localities = locality.split(",").map((s) => s.trim()).filter(Boolean);
     if (propertyType) params.propertyDescription = propertyType;
     if (notFullMarketPrice) params.notFullMarketPrice = true;
     if (vatExclusive) params.vatExclusive = true;
+    if (housingTypeParam === "house" || housingTypeParam === "apartment") params.housingType = housingTypeParam;
 
     const where = buildPprFilterWhere(params);
 

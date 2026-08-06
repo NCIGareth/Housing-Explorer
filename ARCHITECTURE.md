@@ -11,9 +11,11 @@ This repository operates as a `pnpm` monorepo driven by `turbo`, specifically se
 - **`apps/web`**: Next.js 15 App Router interface.
   - *Data Access*: Uses React Server Components heavily. Data queries are isolated in `apps/web/lib/queries.ts`.
   - *Streaming*: Pages use `Suspense` boundaries with skeleton fallbacks for progressive rendering.
-  - *Caching*: Server-rendered on every request (`force-dynamic`). Home page and sale detail pages avoid stale data issues from build-time caching.
+  - *Caching*: Server-rendered on every request (`force-dynamic`). Home page and sale detail pages avoid stale data issues from build-time caching. Monthly county medians are pre-computed into the `MedianPriceCache` table and read cache-first. Compare-tool series for official index data read the `HistoricalMetric` table.
+  - *Compare tool*: `/compare` renders either the official CSO index (counties) or quarterly PPR medians (counties + eircode sectors) via `getMultiHistoricalSeries` / `getMultiMedianSeries`.
   - *Client Pages*: Account pages (`/account/alerts`, `/account/favourites`, `/account/profile`) are client components with `"use client"`.
-  - *Data Export*: CSV download via `/api/export` (up to 10,000 records).
+  - *Data Export*: CSV download via `/api/export` (up to 10,000 records), CSV-injection-sanitized.
+  - *Rate limiting*: API routes use Upstash Redis (`@upstash/ratelimit`) with an in-memory fallback for local dev.
   - *Testing*: Jest via `next/jest` configuration. Tests in `apps/web/__tests__/` and `apps/web/components/__tests__/`.
 
 ## 2. Data Integrity & Normalization
@@ -21,22 +23,29 @@ The ingestion pipeline enforces strict data cleaning:
 - **Normalization**: Abbreviations (Rd, Sq, Ave) are expanded to full words.
 - **Proper Case**: All-caps addresses are converted to CamelCase for readability.
 - **Spatial Fallbacks**: Heuristic estimation (based on Routing Keys) is used when exact geocoding is unavailable.
+- **Coordinate confidence**: Every row carries `coordinateConfidence` (0–100) and `coordinateErrorMeters` — exact geocodes score 100 (±50 m), vague addresses 85 (±200 m), and estimated points inherit their routing key's measured mean error. The map renders amber error-radius circles for estimated-only pins.
 
-## 3. Connectivity Strategy
-- **DATABASE_URL** (pooler): Used by the app for queries. Points to `pooler.supabase.com:5432` with `?sslmode=require&pgbouncer=true` for Prisma compatibility with transaction-mode pooling.
-- **DIRECT_URL** (direct): Used by Prisma Migrate and admin scripts. Points to `db.<ref>.supabase.co:5432` (direct, no pooler) to avoid competing with the app for pooler connections. If the direct host is IPv6-only from your network, use the pooler URL instead.
-- **Session limit**: The Supabase pooler has a 15-connection session-mode limit. Admin scripts consuming pool connections can starve the production app — use DIRECT_URL for admin queries.
-- **Large-scale ingestion**: Use the direct connection (port 5432, bypassing pooler) to eliminate timeouts and schema visibility lag.
+## 3. Production Deployment
+- **Host**: Self-hosted on an Oracle Cloud ARM box via `docker-compose.prod.yml` — three containers: the Next.js app, PostGIS, and Nominatim.
+- **Reverse proxy**: A host-local Caddyfile serves `https://housing.garethshaws.com`.
+- **Cron**: The host crontab triggers `/api/alerts/dispatch` on the 2nd at 09:00 UTC and `/api/monitor` on Mondays at 12:00 UTC, both with an `x-cron-secret` header. (Also declared in `apps/web/vercel.json` if ever deployed to Vercel.)
+- **Supabase**: Auth only. Postgres is the self-hosted container, not Supabase.
+
+## 4. Connectivity Strategy
+- **Local dev**: Both `DATABASE_URL` and `DIRECT_URL` point at the Supabase pooler (`pooler.supabase.com:5432` with `?sslmode=require&pgbouncer=true`). Prisma-compatible transaction-mode pooling.
+- **Production**: The app runs as a Docker container on the Oracle ARM box with `DATABASE_URL` pointing at the co-located PostGIS container (`db:5432`), so production queries never leave the host.
+- **Ingestion**: Run on the box against the container PostGIS via the compose network (`db:5432`), eliminating pooler connection limits.
+- **Session limit**: The Supabase pooler has a 15-connection session-mode limit — irrelevant to production (self-hosted) but still relevant for local admin scripts against Supabase.
 
 ## 4. Testing Strategy
-- **`@housing/web`**: Jest with `next/jest` — focuses on business logic, external link generators, and component rendering.
+- **`@housing/web`**: Jest with `next/jest` — focuses on business logic, external link generators, queries, and component rendering.
 - **`@housing/shared`**: Vitest — focuses on Zod schema validation edge cases.
 - **`@housing/ingestion`**: Vitest — focuses on data quality, geocoding heuristics, and CSV column detection.
 - **`@housing/db`**: Vitest — Prisma client initialization verification.
 - **`@housing/web`**: 7 Playwright E2E smoke tests in `apps/web/e2e/` — covers homepage, API health, search, short query validation, map section, export link, and county filter. DB-dependent tests skip gracefully in CI.
-- **Total**: 168 unit/integration tests across 13 test files + 7 E2E smoke tests.
+- **Total**: 173 unit/integration tests across 18 test files + 7 E2E smoke tests.
 
-## 5. Authentication Layer
+## 6. Authentication Layer
 
 Auth uses **Supabase Auth** (email/password). Supabase manages password hashing, session cookies, and token refresh automatically.
 
@@ -82,7 +91,7 @@ Model stored in Prisma as a join table between `User` and `PropertySale`:
 - Returns `text/csv` with `Content-Disposition: attachment`
 - No auth required (public data)
 
-## 6. Hard Boundaries for Agents
+## 7. Hard Boundaries for Agents
 1. **Never install ORM / DB dependencies inside `apps/web`.** Always update `packages/db`.
 2. **Always use server actions or `@/lib/queries.ts`** when a user interface component needs to read from the Postgres database. 
 3. **Keep code edits focused** into single files to stay within the 16k token context window.

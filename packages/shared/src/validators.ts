@@ -47,5 +47,6 @@ export const propertySaleSchema = z.object({
   estimatedLatitude: z.number().min(-90).max(90).nullable().optional(),
   estimatedLongitude: z.number().min(-180).max(180).nullable().optional(),
   coordinateConfidence: z.number().min(0).max(100).nullable().optional(),
-  coordinateErrorMeters: z.number().int().nonnegative().nullable().optional()
+  coordinateErrorMeters: z.number().int().nonnegative().nullable().optional(),
+  isApartment: z.boolean().nullable().optional()
 });

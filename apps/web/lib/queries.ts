@@ -86,7 +86,7 @@ export async function getLocalCrimeStats(county: string, locality?: string) {
   }));
 }
 
-/** Monthly median sale price (EUR) from the Property Price Register. Supports filtering. */
+/** Median monthly sale price (EUR) from the Property Price Register. Supports filtering. */
 export async function getPprMedianPriceByMonth(params: {
   counties: string[];
   eircodes?: string[];
@@ -98,6 +98,7 @@ export async function getPprMedianPriceByMonth(params: {
   propertyDescription?: string;
   notFullMarketPrice?: boolean;
   vatExclusive?: boolean;
+  housingType?: "house" | "apartment";
 }) {
   if (isBuildPhase()) return [];
   const prisma = await getDb();
@@ -107,7 +108,7 @@ export async function getPprMedianPriceByMonth(params: {
     !params.localities?.length && !params.propertyDescription &&
     !params.startDate && !params.endDate && params.minPriceEur === undefined &&
     params.maxPriceEur === undefined && params.notFullMarketPrice === undefined &&
-    params.vatExclusive === undefined;
+    params.vatExclusive === undefined && params.housingType === undefined;
 
   if (useCache) {
     const cached = await prisma.medianPriceCache.findMany({
@@ -162,6 +163,12 @@ export async function getPprMedianPriceByMonth(params: {
     whereClauses.push(Prisma.sql`"vatExclusive" = ${params.vatExclusive}`);
   }
 
+  if (params.housingType === "apartment") {
+    whereClauses.push(Prisma.sql`"isApartment" = true`);
+  } else if (params.housingType === "house") {
+    whereClauses.push(Prisma.sql`"isApartment" = false`);
+  }
+
   const where = Prisma.sql`WHERE ${Prisma.join(whereClauses, ' AND ')}`;
 
   const result = await prisma.$queryRaw`
@@ -186,6 +193,7 @@ export type PprFilterParams = {
   propertyDescription?: string;
   notFullMarketPrice?: boolean;
   vatExclusive?: boolean;
+  housingType?: "house" | "apartment";
 };
 
 export function buildPprFilterWhere(params: PprFilterParams) {
@@ -218,6 +226,12 @@ export function buildPprFilterWhere(params: PprFilterParams) {
     conditions.push({
       descriptionOfProperty: { contains: params.propertyDescription, mode: "insensitive" as const },
     });
+  }
+
+  if (params.housingType === "apartment") {
+    conditions.push({ isApartment: true });
+  } else if (params.housingType === "house") {
+    conditions.push({ isApartment: false });
   }
 
   if (params.startDate || params.endDate) {
@@ -275,6 +289,7 @@ type PprSalesParams = {
   propertyDescription?: string;
   notFullMarketPrice?: boolean;
   vatExclusive?: boolean;
+  housingType?: "house" | "apartment";
   take?: number;
   skip?: number;
 };

@@ -33,12 +33,14 @@ export function ActiveFilterChips({ searchParams = {} }: Props) {
   const endDate = fmt(searchParams.endDate);
   const notFullMarketPrice = fmt(searchParams.notFullMarketPrice);
   const vatExclusive = fmt(searchParams.vatExclusive);
+  const housingType = fmt(searchParams.housingType);
 
   if (minPriceEur && minPriceEur !== "0") chips.push({ label: `From ${fmtPrice(minPriceEur)}`, key: "minPriceEur" });
   if (maxPriceEur) chips.push({ label: `Up to ${fmtPrice(maxPriceEur)}`, key: "maxPriceEur" });
   if (eircodes.length > 0) chips.push({ label: `Eircode: ${eircodes.join(", ")}`, key: "eircode" });
   if (locality) chips.push({ label: `Areas: ${locality}`, key: "locality" });
-  if (propertyType) chips.push({ label: propertyType.includes("New") ? "New build" : "Second-hand", key: "propertyType" });
+  if (propertyType) chips.push({ label: propertyType.includes("New") ? "New Build" : "Second-Hand", key: "propertyType" });
+  if (housingType) chips.push({ label: housingType === "apartment" ? "Apartments / Flats" : "Houses only", key: "housingType" });
   if (startDate) chips.push({ label: `From ${startDate}`, key: "startDate" });
   if (endDate) chips.push({ label: `To ${endDate}`, key: "endDate" });
   if (notFullMarketPrice) chips.push({ label: "Non-market price", key: "notFullMarketPrice" });

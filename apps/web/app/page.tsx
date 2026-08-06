@@ -30,6 +30,7 @@ type PageProps = {
     locality?: string;
     notFullMarketPrice?: string;
     vatExclusive?: string;
+    housingType?: string;
     page?: string;
     pageSize?: string;
   }>;
@@ -69,6 +70,9 @@ export default async function Home({ searchParams }: PageProps) {
   const endDate = params.endDate ? new Date(params.endDate) : undefined;
   const notFullMarketPrice = params.notFullMarketPrice === "on";
   const vatExclusive = params.vatExclusive === "on";
+  const housingTypeRaw = params.housingType;
+  const housingType: "house" | "apartment" | undefined =
+    housingTypeRaw === "house" ? "house" : housingTypeRaw === "apartment" ? "apartment" : undefined;
   const page = params.page ? Math.max(1, Number(params.page)) : 1;
   const pageSize = Math.min(100, Math.max(10, Number(params.pageSize) || 20));
 
@@ -83,6 +87,7 @@ export default async function Home({ searchParams }: PageProps) {
     endDate,
     notFullMarketPrice,
     vatExclusive,
+    housingType,
     page,
     pageSize,
   };
@@ -143,6 +148,7 @@ export default async function Home({ searchParams }: PageProps) {
           localities={localities}
           notFullMarketPrice={notFullMarketPrice}
           vatExclusive={vatExclusive}
+          housingType={housingType}
         />
 
         <div className="flex flex-wrap justify-end gap-2">

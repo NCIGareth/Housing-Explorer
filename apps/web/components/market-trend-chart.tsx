@@ -40,7 +40,7 @@ interface MarketTrendChartProps {
   subtitle?: string;
 }
 
-export const MarketTrendChart = React.memo(function MarketTrendChart({ data, title = "Residential Property Price Index", subtitle = "Official CSO Inflation Metric (2015=100)" }: MarketTrendChartProps) {
+export const MarketTrendChart = React.memo(function MarketTrendChart({ data, title = "Residential Property Price Index", subtitle = "Official CSO price index (2015 = 100)" }: MarketTrendChartProps) {
   const formattedData = useMemo(() => {
     return data
       .map((d: typeof data[0]) => {

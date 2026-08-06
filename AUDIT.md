@@ -79,7 +79,7 @@ ireland-housing-explorer/
 | F1 | Low | CSS conflict: `table` defined twice (once with `border-spacing`, again overriding `border-collapse`) | `globals.css:31` and `:85` |
 | F2 | Low | `!important` on `th, td` padding is brittle | `globals.css:92` |
 | F3 | Low | `suppressHydrationWarning` on `<body>` — investigate if still needed | `layout.tsx:26` |
-| F4 | Low | `NEXT_PUBLIC_APP_VERSION` not in `turbo.json` `globalEnv` — always shows `"dev"` | `Header.tsx:145` |
+| F4 | Low | `NEXT_PUBLIC_APP_VERSION` not in `turbo.json` `globalEnv` — always shows `"dev"` | `Header.tsx:145` ✅ Fixed |
 | F5 | Low | No `loading.tsx` or dedicated error boundaries for `/account/*` pages | `apps/web/app/account/` |
 
 ---
@@ -129,9 +129,9 @@ ireland-housing-explorer/
 
 | # | Severity | Issue | File:Line |
 |---|---|---|---|
-| A1 | **High** | Password change does **not** require current password — any authenticated session can change password | `api/auth/profile/route.ts` |
+| A1 | **High** | Password change does **not** require current password — any authenticated session can change password | `api/auth/profile/route.ts` ✅ Fixed — `currentPassword` now required + verified via `signInWithPassword` |
 | A2 | Medium | Middleware exempts `/api/alerts/dispatch` from session check; handler re-checks (redundant but correct) | `middleware.ts:17` |
-| A3 | Medium | `auth-sync.sql` hardcodes production URL as fallback for dispatch | `supabase/auth-sync.sql:47` |
+| A3 | Medium | `auth-sync.sql` hardcodes production URL as fallback for dispatch | `supabase/auth-sync.sql:47` ✅ Fixed — now reads `app.dispatch_url` from settings (and dispatch moved to host crontab) |
 | A4 | Low | No email verification on signup (acknowledged in ARCHITECTURE.md as free-tier constraint) | — |
 
 ---
@@ -189,7 +189,7 @@ ireland-housing-explorer/
 
 | # | Severity | Issue | File |
 |---|---|---|---|
-| I1 | **High** | `$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"` disables TLS verification globally for the PowerShell session | `ingest.ps1:21` |
+| I1 | **High** | `$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"` disables TLS verification globally for the PowerShell session | `ingest.ps1` ✅ Fixed — removed |
 | I2 | Medium | `ingest.yml` uses `curl -k` (insecure) for downloading PPR-ALL.zip | `.github/workflows/ingest.yml` |
 | I3 | Medium | `ingest.yml` has near-duplicate jobs (`sync` and `full-reimport`) — high maintenance burden | `.github/workflows/ingest.yml` |
 
@@ -220,14 +220,14 @@ ireland-housing-explorer/
 
 ## 9. Testing
 
-| Package | Framework | Test Files | Count (per README) |
+| Package | Framework | Test Files | Count |
 |---|---|---|---|
-| `@housing/web` | Jest (next/jest) | 5 component tests | ~50? |
-| `@housing/shared` | Vitest | 1 | Schema validation |
-| `@housing/ingestion` | Vitest | 4 | Data quality, columns, geocoding, heuristics |
-| `@housing/db` | Vitest | 1 | Prisma client init |
+| `@housing/web` | Jest (next/jest) | 9 | 103 |
+| `@housing/shared` | Vitest | 2 | Schema validation |
+| `@housing/ingestion` | Vitest | 5 | Data quality, columns, geocoding, heuristics, confidence |
+| `@housing/db` | Vitest | 2 | Prisma client init |
 
-**Total**: 154 tests across 9 test files (per README).
+**Total**: 173 unit/integration tests across 18 test files + 7 E2E smoke tests.
 
 ### Gaps
 - Only 5 component tests for 15+ components
@@ -299,14 +299,14 @@ ireland-housing-explorer/
 | ID | Severity | Category | Issue | Location | Status |
 |---|---|---|---|---|---|---|
 | R1 | **Critical** | Security | Rate limiter is in-memory — no-op on Vercel serverless | `apps/web/lib/rate-limit.ts` | ✅ Resolved — Upstash Redis |
-| A1 | **High** | Auth | Password change doesn't verify current password | `apps/web/app/api/auth/profile/route.ts` | Open |
-| I1 | **High** | Security | TLS verification disabled globally during ingestion | `ingest.ps1:21` | Open |
+| A1 | **High** | Auth | Password change doesn't verify current password | `apps/web/app/api/auth/profile/route.ts` | ✅ Resolved — current password verified |
+| I1 | **High** | Security | TLS verification disabled globally during ingestion | `ingest.ps1` | ✅ Resolved — removed |
 | S1 | **High** | Security | CSP includes `unsafe-inline` and `unsafe-eval` | `apps/web/middleware.ts:37` | Open |
-| I2 | Medium | Security | `curl -k` (insecure) in CI ingest workflow | `.github/workflows/ingest.yml` | Open |
-| A3 | Medium | Config | Hardcoded production URL in auth-sync.sql | `supabase/auth-sync.sql:47` | Open |
+| I2 | Medium | Security | `curl -k` (insecure) in CI ingest workflow | `.github/workflows/ingest.yml` | Open (PPR site has broken cert chain — deliberate) |
+| A3 | Medium | Config | Hardcoded production URL in auth-sync.sql | `supabase/auth-sync.sql:47` | ✅ Resolved — reads `app.dispatch_url`; cron moved to host |
 | I3 | Medium | CI | `ingest.yml` duplicates job logic — maintenance burden | `.github/workflows/ingest.yml` | Open |
 | F1 | Low | CSS | Duplicate `table` rules; `!important` on cell padding | `apps/web/app/globals.css` | Open |
-| F4 | Low | Config | `NEXT_PUBLIC_APP_VERSION` not in `turbo.json` globalEnv | `apps/web/components/Header.tsx:145` | Open |
+| F4 | Low | Config | `NEXT_PUBLIC_APP_VERSION` not in `turbo.json` globalEnv | `apps/web/components/Header.tsx:145` | ✅ Resolved — in `globalEnv` |
 | D2 | Low | UX | No `loading.tsx`/`error.tsx` for `/account/*` pages | `apps/web/app/account/` | Open |
 | P2 | Low | Deps | `typescript` duplicated in every package | Multiple `package.json` | Open |
 | — | Low | Migrations | Wasted migration (password field added then removed) | `prisma/migrations/` | Open |
@@ -318,13 +318,13 @@ ireland-housing-explorer/
 1. ~~**Replace in-memory rate limiter** with `@upstash/redis` or `@vercel/kv` for production~~ ✅ Done
 2. ~~**Add integration tests** for API routes, especially auth-dependent ones~~ ✅ Done (14 tests)
 3. ~~**Add E2E tests** (Playwright/Cypress) for critical user flows~~ ✅ Done (7 smoke tests, DB-dependent skip in CI)
-4. **Add current password verification** to the profile password-change endpoint
-5. **Remove `NODE_TLS_REJECT_UNAUTHORIZED=0`** from `ingest.ps1` — use per-request TLS options
+4. ~~**Add current password verification** to the profile password-change endpoint~~ ✅ Done
+5. ~~**Remove `NODE_TLS_REJECT_UNAUTHORIZED=0`** from `ingest.ps1` — use per-request TLS options~~ ✅ Done
 6. **Strictify CSP** — remove `unsafe-eval`, consider nonce-based approach
 7. **Remove `curl -k`** from CI workflow or add proper cert validation
 8. **Consolidate CSS** — remove duplicate `table` rules and `!important`
-9. **Add `NEXT_PUBLIC_APP_VERSION` to `turbo.json` `globalEnv`** or remove the display
+9. ~~**Add `NEXT_PUBLIC_APP_VERSION` to `turbo.json` `globalEnv`** or remove the display~~ ✅ Done
 10. **Consider ISR/caching** for dashboard — `force-dynamic` is expensive on a 15-connection pooler
 11. **Audit `apps/web/.env.production`** against `turbo.json` `globalEnv`
 12. **Consider React 19 upgrade** now that Next.js 15 fully supports it
-13. **Add request validation** for search query (length limits, character restrictions)
+13. ~~**Add request validation** for search query (length limits, character restrictions)~~ ✅ Done

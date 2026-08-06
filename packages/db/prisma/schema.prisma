@@ -131,8 +131,11 @@ model PropertySale {
   estimatedLongitude      Float?
   coordinateConfidence    Float?
   coordinateErrorMeters   Int?
+  isApartment             Boolean?
   createdAt               DateTime @default(now())
   favouriteProperties     FavouriteProperty[]
+
+  @@index([isApartment])
 
   @@index([county, saleDate])
   @@index([saleDate, priceEur])

@@ -188,7 +188,7 @@ export default async function PprSaleDetailPage({ params }: Props) {
               <span className="font-bold text-slate-900">{sale.county}</span>
             </div>
             <div className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm">
-              <span className="text-slate-400 block uppercase text-[11px] font-bold tracking-widest">Postal Code</span>
+              <span className="text-slate-400 block uppercase text-[11px] font-bold tracking-widest">Eircode</span>
               <span className="font-bold text-slate-900">
                 {sale.eircode ? (
                   sale.eircode

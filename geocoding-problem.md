@@ -1,6 +1,6 @@
 # The Geocoding Problem
 
-Status as of 2026-08-05. All numbers refer to the self-hosted database
+Status as of 2026-08-06. All numbers refer to the self-hosted database
 (`housing-db`) unless noted. Dataset: 701,890 PPR property sales,
 2014-01-02 → 2026-07-24.
 
@@ -23,6 +23,18 @@ Status as of 2026-08-05. All numbers refer to the self-hosted database
   back to estimated-coordinate routing-key centroids for the rest.
 - Coordinate recovery (`recover-coordinates.ts`): **11 address-mirror** +
   **273 eircode-mirror** rows recovered.
+
+### Coordinate confidence
+- Every row now carries `coordinateConfidence` (0–100) + `coordinateErrorMeters`
+  (`packages/ingestion/src/lib/geocode-confidence.ts`): exact geocodes score
+  100 (±50 m); vague addresses ("Site at", "Lands at", …) score 85 (±200 m);
+  estimated-only rows score piecewise from their routing key's measured mean
+  error. Distribution: 453,086 @100 · 52,538 @50–99 · 181,517 @1–49 · 14,749 null.
+  ~26% of rows (184,456) carry an error radius > 5 km — worst in rural routing
+  keys (H71 Leitrim is only 20.3% exact-coord).
+- Known gap (2026-08-06): 1,357 rows have coords but NULL confidence (written
+  by the mirror/recovery job after the backfill) — re-run
+  `ppr:confidence:backfill` to mop up; 1,089 exact-coord rows score <100.
 
 ### Geocoding infrastructure
 - Local Nominatim (`housing-nominatim`, Ireland OSM extract) is fast:
@@ -55,11 +67,11 @@ everything from the ground-truth DB:
   (89% hit rate)**, lifting estimated-coordinate/eircode coverage from 64.2% →
   96.1%. `VACUUM ANALYZE` ran after.
 
-## Gaps (as of 2026-08-05)
+## Gaps (as of 2026-08-06)
 
 | Gap | Size | Why it's stuck |
 |-----|------|----------------|
-| Rows with **no coordinates at all** (exact or estimated) | **~27.5k (3.9%)** | Mostly apartment/estate complexes where the town is buried mid-token (e.g. "Apartment 204, Pier Head, Allins Quay Youghal"); no Nominatim match, no routing-key token |
+| Rows with **no coordinates at all** (exact or estimated) | **13,392 (1.9%)** | Mostly apartment/estate complexes where the town is buried mid-token (e.g. "Apartment 204, Pier Head, Allins Quay Youghal"); no Nominatim match, no routing-key token |
 | Rows with coordinates but **no exact eircode** | ~380k | Spatial eircode recovery requires a seeded `VerifiedEircodeMap`, which needs the licensed dataset |
 | Exact eircode coverage ceiling | 41.9% | ECAF/ECAD (2.2M points) is paid/proprietary — the only way past this |
 | `VerifiedEircodeMap` | 0 rows (empty) | Table + geom/GIST index exist but was never seeded |
@@ -69,9 +81,9 @@ everything from the ground-truth DB:
 ```
               +---- has eircode ----+      +-- has coords --+
   701,890     |   293,861 exact     |      |   454,175 exact |
-   rows       |   +380,573 est.     |      |   220,188 est.  |
+   rows       |   +380,618 est.     |      |   234,323 est.  |
               |                     |      |                 |
-              |   27,456 none       |      |    27,527 none  |
+              |    27,411 none      |      |    13,392 none  |
 ```
 
 ## What we tried and failed at

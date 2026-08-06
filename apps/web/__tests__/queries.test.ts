@@ -60,6 +60,18 @@ describe("Query helpers (unit)", () => {
       const cond = result.AND!.find((c) => "priceEur" in c);
       expect(cond?.priceEur).toEqual({ gte: 100000 });
     });
+
+    it("filters apartments only", () => {
+      const result = buildPprFilterWhere({ counties: ["Dublin"], housingType: "apartment" });
+      const cond = result.AND!.find((c) => "isApartment" in c);
+      expect(cond?.isApartment).toBe(true);
+    });
+
+    it("filters houses only", () => {
+      const result = buildPprFilterWhere({ counties: ["Dublin"], housingType: "house" });
+      const cond = result.AND!.find((c) => "isApartment" in c);
+      expect(cond?.isApartment).toBe(false);
+    });
   });
 
   describe("search query construction", () => {

@@ -27,45 +27,33 @@ A DB trigger (`handle_new_user()`) syncs `auth.users` → `public.User` on signu
 
 #### GET /api/health
 
-Provides system health status and basic metrics.
+Provides system health status and database size metrics.
 
 **Response (200):**
 ```json
 {
   "status": "healthy",
   "timestamp": "2024-01-01T00:00:00.000Z",
-  "uptime": 3600.5,
   "database": {
-    "status": "connected",
-    "activeListings": 150,
-    "historicalRecords": 5000,
-    "users": 25
-  },
-  "ingestion": {
-    "lastSuccessfulRun": {
-      "source": "PPR",
-      "finishedAt": "2024-01-01T00:00:00.000Z",
-      "rowsProcessed": 50
-    },
-    "lastFailedRun": null,
-    "recentRuns": [
-      {
-        "source": "PPR",
-        "status": "SUCCESS",
-        "startedAt": "2024-01-01T00:00:00.000Z",
-        "duration": 45.2
-      }
+    "sizeMb": 271,
+    "capacityMb": 500,
+    "pctUsed": 54,
+    "tables": [
+      { "name": "PropertySale", "rows": 701890, "sizeMb": 120 }
     ]
   }
 }
 ```
 
+**Notes:**
+- Reports total DB size vs the 500 MB capacity, plus the 10 largest tables
+- Used by the weekly DB size monitor (`/api/monitor`) and the E2E health smoke test
+
 **Response (503 - Unhealthy):**
 ```json
 {
   "status": "unhealthy",
-  "timestamp": "2024-01-01T00:00:00.000Z",
-  "error": "Database connection failed"
+  "timestamp": "2024-01-01T00:00:00.000Z"
 }
 ```
 
@@ -97,10 +85,38 @@ Full-text search across Property Price Register records.
 ```
 
 **Notes:**
-- Searches across `address`, `eircode`, and `estimatedEircode` using case-insensitive ILIKE
+- Searches across `address`, `eircode`, and `estimatedEircode` using case-insensitive ILIKE (trigram GIN index)
 - Results ordered by `saleDate DESC`, limited to 20
-- Returns 400 if query is less than 2 characters
+- Returns 400 if query is less than 2 characters or more than 200, or contains `<>"'`
 - Returns 429 with `Retry-After: 60` if rate limited (30 req/min per IP)
+- Response is cached (`Cache-Control: public, max-age=3600`)
+
+---
+
+### Eircode Sectors
+
+#### GET /api/eircodes
+
+Suggest eircode routing keys (e.g. `D20`) for the Compare tool, deduplicated and ordered by sales volume.
+
+**Query Parameters:**
+| Param | Type | Description |
+|-------|------|-------------|
+| `county` | string | Filter by county. Repeatable: `?county=Dublin&county=Kildare`. Optional. |
+
+**Response (200):**
+```json
+{
+  "items": [
+    { "key": "D20", "county": "Dublin", "locality": "Dublin 20", "volume": 12453 }
+  ]
+}
+```
+
+**Notes:**
+- `key` is the 3-char routing-key prefix of `eircode` (exact) falling back to `estimatedEircode`
+- Limited to 500 distinct keys; each key's highest-volume locality is shown
+- Response is cached (`Cache-Control: public, max-age=86400`)
 
 ---
 
@@ -306,7 +322,7 @@ Update user name and/or password.
 
 Download property sale records as CSV.
 
-**Authentication:** Not required
+**Authentication:** Required (session)
 
 **Query Parameters:**
 | Param | Type | Description |
@@ -316,6 +332,12 @@ Download property sale records as CSV.
 | `maxPriceEur` | number | Maximum price |
 | `startDate` | string | Earliest sale date (ISO) |
 | `endDate` | string | Latest sale date (ISO) |
+| `propertyType` | string | `Second-Hand Dwelling house /Apartment` or `New Dwelling house /Apartment` |
+| `housingType` | string | `house` (excludes apartments) or `apartment` (apartments/flats only) |
+| `locality` | string | Comma-separated areas/towns |
+| `eircode` | string | Eircode sector prefix (repeatable) |
+| `notFullMarketPrice` | string | `on` to include non-market-price sales |
+| `vatExclusive` | string | `on` to exclude VAT-exclusive sales |
 
 **Response (200):** CSV file download with `Content-Disposition: attachment`
 
@@ -406,12 +428,26 @@ Send a preview email for an alert (used for testing).
 
 Manually trigger alert dispatch for all active alerts.
 
-**Authentication:** Required (admin)
+**Authentication:** Admin session, or cron auth — `x-vercel-cron: 1` header or `x-cron-secret` matching `DISPATCH_CRON_SECRET`.
+
+**Notes:**
+- For each enabled alert, queries `PropertySale` where `createdAt > lastTriggeredAt` (fallback: last 7 days) plus the saved search filters (county, min/max price)
+- Emails a plain-text digest (max 20 sales per alert) via Resend; updates `lastTriggeredAt` on success
+- Triggered monthly on the 2nd at 09:00 UTC by a crontab entry on the production host (also declared in `vercel.json`)
 
 **Response (200):**
 ```json
 {
-  "sent": 5
+  "sent": 5,
+  "failed": [{ "alertId": "alert_123", "reason": "email send failed" }],
+  "skipped": ["alert_456"]
+}
+```
+
+**Response (401):**
+```json
+{
+  "error": "Unauthorized"
 }
 ```
 
@@ -435,11 +471,34 @@ Delete an alert.
 }
 ```
 
+### DB Size Monitor
+
+#### GET /api/monitor
+
+Weekly cron that reports database size and emails the admin when usage exceeds 85% of the 500 MB capacity.
+
+**Authentication:** None (cron invoked from the production host)
+
+**Notes:**
+- Emails `ADMIN_EMAILS` via Resend only when `pctUsed >= 85` and the variable is set
+- Triggered every Monday at 12:00 UTC by a crontab entry on the production host
+
+**Response (200):**
+```json
+{
+  "sizeMb": 271,
+  "capacityMb": 500,
+  "pctUsed": 54,
+  "alertSent": false
+}
+```
+
 ## Data Types
 
 ### Alert Types
 
 - `NEW_LISTING_MATCH`: Triggered when new PPR property sales match saved search criteria
+- `PRICE_DROP`: Accepted by the API and surfaced in the UI; dispatch currently treats all alerts as new-sale matches
 
 ## Error Responses
 
@@ -483,18 +542,18 @@ All endpoints may return the following error responses:
 
 ## Rate Limiting
 
-All rate limited endpoints use **Upstash Redis** (`@upstash/ratelimit`) on Vercel, falling back to an in-memory store in local development. Exceeded requests receive a `429 Too Many Requests` response with a `Retry-After` header.
+All rate limited endpoints use **Upstash Redis** (`@upstash/ratelimit`), falling back to an in-memory store in local development. Exceeded requests receive a `429 Too Many Requests` response with a `Retry-After` header.
 
 | Endpoint | Limit |
 |----------|-------|
 | `GET /api/search` | 30 req/min per IP |
-| `GET /api/export` | 10 req/min per IP |
+| `GET /api/export` | 10 req/min per IP (auth required since 2026-08-06) |
 | `GET/POST/DELETE /api/alerts` | 10 req/user |
 | `GET/POST/DELETE /api/saved-searches` | 10 req/user |
 | `GET/POST/DELETE /api/favourites` | 10 req/user |
 | `PATCH /api/auth/profile` | 5 req/user |
 
-Other API endpoints (`/api/health`, `/api/alerts/dispatch`) are not rate limited.
+Other API endpoints (`/api/health`, `/api/eircodes`, `/api/monitor`, `/api/alerts/dispatch`) are not rate limited.
 
 ## Versioning
 

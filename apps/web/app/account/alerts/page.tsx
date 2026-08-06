@@ -123,7 +123,7 @@ export default function AlertsPage() {
   }
 
   if (authLoading || loading) {
-    return <div className="max-w-3xl mx-auto px-4 py-12"><p className="text-slate-500">Loading...</p></div>;
+    return <div className="max-w-3xl mx-auto px-4 py-12"><p className="text-slate-500">Loading…</p></div>;
   }
 
   return (
@@ -151,11 +151,11 @@ export default function AlertsPage() {
               <input value={formCounty} onChange={e => setFormCounty(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="e.g. Dublin" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Min price (EUR)</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Min price (€)</label>
               <input type="number" value={formMinPrice} onChange={e => setFormMinPrice(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Max price (EUR)</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Max price (€)</label>
               <input type="number" value={formMaxPrice} onChange={e => setFormMaxPrice(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
             </div>
             <div>

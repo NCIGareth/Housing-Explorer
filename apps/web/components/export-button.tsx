@@ -1,9 +1,12 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useUser } from "@/components/auth-provider";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 export function ExportButton() {
+  const { user } = useUser();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [preparing, setPreparing] = useState(false);
   const [error, setError] = useState(false);
@@ -30,8 +33,14 @@ export function ExportButton() {
   if (locality) params.set("locality", locality);
   if (notFullMarketPrice) params.set("notFullMarketPrice", notFullMarketPrice);
   if (vatExclusive) params.set("vatExclusive", vatExclusive);
+  const housingType = searchParams.get("housingType");
+  if (housingType) params.set("housingType", housingType);
 
   async function handleExport() {
+    if (!user) {
+      router.push("/auth/signin");
+      return;
+    }
     setPreparing(true);
     setError(false);
     try {

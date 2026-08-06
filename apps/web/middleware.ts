@@ -1,7 +1,7 @@
 import { updateSession } from "@/lib/supabase/middleware";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PROTECTED_API_PATHS = ["/api/alerts", "/api/favourites", "/api/saved-searches"];
+const PROTECTED_API_PATHS = ["/api/alerts", "/api/favourites", "/api/saved-searches", "/api/export"];
 const PROTECTED_PAGE_PATHS = ["/account/alerts", "/account/favourites", "/account/profile"];
 const DISPATCH_PATH = "/api/alerts/dispatch";
 

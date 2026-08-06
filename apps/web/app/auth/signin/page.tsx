@@ -9,6 +9,7 @@ function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const message = searchParams.get("message");
   const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(null);
 
   const [email, setEmail] = useState("");
@@ -54,6 +55,12 @@ function SignInForm() {
         {error && (
           <div className="mb-4 rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700">
             {error}
+          </div>
+        )}
+
+        {message && !error && (
+          <div className="mb-4 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700">
+            {message}
           </div>
         )}
 

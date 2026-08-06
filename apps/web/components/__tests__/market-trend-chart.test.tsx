@@ -6,7 +6,7 @@ describe('MarketTrendChart', () => {
   it('renders title and subtitle', () => {
     render(<MarketTrendChart data={[]} />)
     expect(screen.getByText('Residential Property Price Index')).toBeInTheDocument()
-    expect(screen.getByText('Official CSO Inflation Metric (2015=100)')).toBeInTheDocument()
+    expect(screen.getByText('Official CSO price index (2015 = 100)')).toBeInTheDocument()
   })
 
   it('shows empty state when no data', () => {
