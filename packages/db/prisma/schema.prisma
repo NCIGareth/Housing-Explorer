@@ -137,10 +137,11 @@ model PropertySale {
   @@index([county, saleDate])
   @@index([saleDate, priceEur])
   // @@index([address], type: Gin) — created via raw SQL migration 20260510_add_trigram_index (pg_trgm GIN index)
-  // PropertySale_eircode_trgm_idx / estimatedEircode trgm GIN, routing_key_idx and
-  // coordinateConfidence_idx are also raw-SQL-managed (20260512_add_query_indexes,
-  // 20260805_add_coordinate_confidence). isApartment has no index — a boolean at
-  // ~6% selectivity is never worth a btree (dropped 20260806_drop_unused_indexes).
+  // PropertySale_eircode_trgm_idx / estimatedEircode trgm GIN and routing_key_idx
+  // are also raw-SQL-managed (20260512_add_query_indexes). isApartment has no index —
+  // a boolean at ~6% selectivity is never worth a btree (dropped 20260806_drop_unused_indexes).
+  // coordinateConfidence_idx was dropped too (20260807_drop_coordinate_confidence_idx) — it is
+  // never filtered on at query time and forced the confidence backfill to full-index-scan.
 }
 
 model MedianPriceCache {
