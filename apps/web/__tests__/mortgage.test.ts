@@ -120,3 +120,47 @@ describe("calculateMortgage — monthly payment outputs", () => {
     expect(result.monthlyPayment).toBeCloseTo(mortgageMonthlyPayment(240000, 4, 30), 2);
   });
 });
+
+describe("calculateMortgage — min income needed", () => {
+  it("returns loanNeeded / 4 when the deposit satisfies the LTV rule", () => {
+    const result = calculateMortgage({
+      price: 350000,
+      grossAnnualIncome: 80000,
+      deposit: 70000,
+      isFirstTimeBuyer: true,
+      termYears: 30,
+      ratePct: 3.9,
+    });
+    // loanNeeded = 280000 -> min income = 70000
+    expect(result.minIncomeNeeded).toBeCloseTo(70000, 0);
+    expect(result.depositBinding).toBe(false);
+  });
+
+  it("returns null when no income fits — the deposit is too small", () => {
+    const result = calculateMortgage({
+      price: 300000,
+      grossAnnualIncome: 200000,
+      deposit: 10000,
+      isFirstTimeBuyer: true,
+      termYears: 30,
+      ratePct: 4,
+    });
+    // FTB LTV max = 270000, loanNeeded = 290000 -> deposit binding
+    expect(result.depositBinding).toBe(true);
+    expect(result.minIncomeNeeded).toBeNull();
+  });
+
+  it("needs zero income when the deposit fully covers the price", () => {
+    const result = calculateMortgage({
+      price: 200000,
+      grossAnnualIncome: 0,
+      deposit: 200000,
+      isFirstTimeBuyer: true,
+      termYears: 30,
+      ratePct: 4,
+    });
+    expect(result.loanNeeded).toBe(0);
+    expect(result.minIncomeNeeded).toBe(0);
+    expect(result.affordable).toBe(true);
+  });
+});

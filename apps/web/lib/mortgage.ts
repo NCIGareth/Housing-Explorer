@@ -43,6 +43,14 @@ export type MortgageResult = {
   loan: number;
   /** Whether the purchase is achievable under the rules with the given deposit. */
   affordable: boolean;
+  /**
+   * Gross annual income at which the LTI cap just covers loanNeeded
+   * (loanNeeded / 4). Null when the deposit is too small for the LTV rule —
+   * no income level can fix that.
+   */
+  minIncomeNeeded: number | null;
+  /** True when even unlimited income can't close the gap (deposit too small). */
+  depositBinding: boolean;
   /** Annual equivalent rate used. */
   ratePct: number;
   monthlyPayment: number;
@@ -67,9 +75,16 @@ export function calculateMortgage(input: MortgageInput): MortgageResult {
     ? FTB_LTV_FIRST_TRANCHE * Math.min(price, FTB_LTV_CAP) + FTB_LTV_ABOVE_TRANCHE * Math.max(price - FTB_LTV_CAP, 0)
     : MOVER_LTV * price;
 
+  const loanNeeded = Math.max(price - deposit, 0);
+
+  // The LTV rule is binding when even its maximum loan can't cover
+  // price - deposit. No income level fixes that — only a bigger deposit.
+  const ltvGap = loanNeeded - maxLtvLoan;
+  const depositBinding = ltvGap > 0.01;
+  const minIncomeNeeded = depositBinding ? null : loanNeeded / LTI_MULTIPLE;
+
   const maxBorrowable = Math.min(maxLtvLoan, maxLtiLoan);
   const requiredDeposit = Math.max(price - maxBorrowable, 0);
-  const loanNeeded = Math.max(price - deposit, 0);
 
   // Small tolerance so round-number deposits don't false-fail on float errors.
   const affordable = loanNeeded <= maxBorrowable + 0.01;
@@ -85,6 +100,8 @@ export function calculateMortgage(input: MortgageInput): MortgageResult {
     loanNeeded,
     loan,
     affordable,
+    minIncomeNeeded,
+    depositBinding,
     ratePct,
     monthlyPayment,
     ltvPct,

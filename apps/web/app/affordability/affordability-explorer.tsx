@@ -91,18 +91,25 @@ export function AffordabilityExplorer({
 
   const yearRate = rateByYear[year] ?? null;
 
+  const priceValue = parseNum(price);
+  const incomeValue = parseNum(income);
+  const depositValue = parseNum(deposit);
+
   const calc = useMemo(
     () =>
       calculateMortgage({
-        price: parseNum(price),
-        grossAnnualIncome: parseNum(income),
-        deposit: parseNum(deposit),
+        price: priceValue,
+        grossAnnualIncome: incomeValue,
+        deposit: depositValue,
         isFirstTimeBuyer: isFtb,
         termYears,
         ratePct: parseNum(ratePct),
       }),
-    [price, income, deposit, isFtb, termYears, ratePct]
+    [priceValue, incomeValue, depositValue, isFtb, termYears, ratePct]
   );
+
+  const depositShortfall = Math.max(priceValue - calc.maxLtvLoan - depositValue, 0);
+  const incomeShortfall = Math.max((calc.minIncomeNeeded ?? 0) - incomeValue, 0);
 
   const timeTravel = useMemo(() => {
     if (!countyRow || countyRow.medianPrice === null || countyRow.income === null || yearRate === null) return null;
@@ -256,22 +263,45 @@ export function AffordabilityExplorer({
             </div>
           </div>
 
-          <div className="rounded-lg bg-slate-50 border border-slate-200 p-4 space-y-2 text-sm">
-            <ResultRow label="Max borrowable" value={eur(calc.maxBorrowable)} />
-            <ResultRow label="Min deposit needed" value={eur(calc.requiredDeposit)} />
-            <ResultRow label="Loan required" value={eur(calc.loanNeeded)} />
-            <ResultRow label="Loan-to-value" value={`${calc.ltvPct.toFixed(0)}%`} />
-            <ResultRow label="Est. monthly payment" value={eur(calc.monthlyPayment)} />
-            <div className={`mt-3 rounded-lg px-4 py-3 font-semibold ${calc.affordable ? "bg-green-50 text-green-700 border border-green-200" : "bg-rose-50 text-rose-700 border border-rose-200"}`}>
-              {calc.affordable
-                ? "✓ Within Central Bank rules"
-                : calc.maxBorrowable <= 0
-                  ? "Enter a price and income to check"
-                  : `✗ Needs ${eur(Math.max(calc.loanNeeded - calc.maxBorrowable, 0))} more — deposit or price/income don't fit the rules`}
+          <div className="space-y-3">
+            <div className="rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-4 shadow-sm">
+              <div className="text-xs font-semibold text-blue-100">Max borrowable by income</div>
+              <div className="text-2xl font-black mt-1">{incomeValue > 0 ? eur(calc.maxLtiLoan) : "—"}</div>
+              <div className="text-[11px] text-blue-100 mt-1">
+                {incomeValue > 0
+                  ? `4× your ${eur(incomeValue)} gross annual income (Central Bank LTI rule)`
+                  : "Enter your gross annual income to see what you can borrow"}
+              </div>
             </div>
-            <p className="text-[11px] text-slate-400 pt-1">
-              Illustrative only. Assumes 4× income cap (some FTB lending may go to 4.5× for up to 20% of loans) and ignores the 2% state levy, fees and rates above the first few years.
-            </p>
+
+            <div className="rounded-lg bg-slate-50 border border-slate-200 p-4 space-y-2 text-sm">
+              <ResultRow label="Max borrowable (both rules)" value={priceValue > 0 ? eur(calc.maxBorrowable) : "—"} />
+              {priceValue > 0 && (
+                <ResultRow
+                  label="Min income needed"
+                  value={calc.minIncomeNeeded === null ? "Deposit is the constraint" : eur(calc.minIncomeNeeded)}
+                />
+              )}
+              <ResultRow label="Max by LTV on this price" value={priceValue > 0 ? eur(calc.maxLtvLoan) : "—"} />
+              <ResultRow label="Min deposit needed" value={priceValue > 0 ? eur(calc.requiredDeposit) : "—"} />
+              <ResultRow label="Loan required" value={priceValue > 0 ? eur(calc.loanNeeded) : "—"} />
+              <ResultRow label="Loan-to-value" value={priceValue > 0 ? `${calc.ltvPct.toFixed(0)}%` : "—"} />
+              <ResultRow label="Est. monthly payment" value={priceValue > 0 ? eur(calc.monthlyPayment) : "—"} />
+              <div className={`mt-3 rounded-lg px-4 py-3 font-semibold ${calc.affordable ? "bg-green-50 text-green-700 border border-green-200" : "bg-rose-50 text-rose-700 border border-rose-200"}`}>
+                {calc.affordable
+                  ? "✓ Within Central Bank rules"
+                  : priceValue <= 0 && incomeValue <= 0
+                    ? "Enter a price and income to check"
+                    : calc.depositBinding
+                      ? `✗ Deposit too small — need ${eur(depositShortfall)} more; no income level fits this price`
+                      : incomeValue > 0
+                        ? `✗ Income too low — need ${eur(incomeShortfall)} more (min ${eur(calc.minIncomeNeeded ?? 0)})`
+                        : `✗ Needs at least ${eur(calc.minIncomeNeeded ?? 0)} gross income for this price and deposit`}
+              </div>
+              <p className="text-[11px] text-slate-400 pt-1">
+                Illustrative only. Assumes 4× income cap (some FTB lending may go to 4.5× for up to 20% of loans) and ignores the 2% state levy, fees and rates above the first few years.
+              </p>
+            </div>
           </div>
         </div>
       </section>
