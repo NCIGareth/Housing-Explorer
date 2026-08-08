@@ -11,6 +11,10 @@ import {
 } from "@/lib/queries";
 import { AffordabilityExplorer } from "./affordability-explorer";
 
+// Server-rendered live data (median prices, income, rates); must not be
+// statically prerendered at build time (build-phase queries return empty).
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata(): Promise<Metadata> {
   const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
