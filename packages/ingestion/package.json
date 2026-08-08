@@ -13,6 +13,8 @@
     "ppr:backfill": "tsx src/scripts/backfill-estimates.ts",
     "ppr:confidence:backfill": "tsx src/scripts/backfill-confidence.ts",
     "ppr:apartment:backfill": "tsx src/scripts/backfill-is-apartment.ts",
+    "cso:income": "tsx src/scripts/ingest-income.ts",
+    "cbi:rates": "tsx src/scripts/ingest-cbi.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

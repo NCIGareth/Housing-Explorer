@@ -649,3 +649,222 @@ export async function searchProperties(query: string, limit = 20) {
 
   return results as Array<SearchResultRow>;
 }
+
+// ---------------------------------------------------------------------------
+// Affordability (CSO RAA02 income + CBI mortgage rates + MedianPriceCache)
+// ---------------------------------------------------------------------------
+
+/** PPR county names that share CSO RAA02's single "Dublin" income estimate. */
+export const DUBLIN_COUNTIES = ["Dublin", "Dún Laoghaire–Rathdown", "Fingal", "South Dublin"];
+
+/** Maps a PPR county to the RAA02 geography that carries its income. */
+export function incomeGeographyForCounty(county: string): string {
+  return DUBLIN_COUNTIES.includes(county) ? "Dublin" : county;
+}
+
+export type AffordabilityRow = {
+  county: string;
+  year: number;
+  /** Average of the 12 monthly MedianPriceCache medians for the year (EUR). */
+  medianPrice: number | null;
+  /** CSO RAA02 disposable income per person (EUR). */
+  income: number | null;
+  /** medianPrice / income — years of per-person income to buy the median house. */
+  ratio: number | null;
+};
+
+/**
+ * Affordability ratio by county for a given year: median house price / disposable
+ * income per person. Median comes from the monthly MedianPriceCache averaged over
+ * the year; income from CSO RAA02 (disposable income per person, annual).
+ */
+export async function getAffordabilityRankingByYear(year: number): Promise<AffordabilityRow[]> {
+  if (isBuildPhase()) return [];
+  const prisma = await getDb();
+
+  const [medianRows, incomeRows] = await Promise.all([
+    prisma.medianPriceCache.findMany({
+      where: { period: { startsWith: `${year}-` } },
+      select: { county: true, value: true },
+    }),
+    prisma.historicalMetric.findMany({
+      where: { source: "CSO_RAA02", metric: "income_disposable_person", period: String(year) },
+      select: { geography: true, value: true },
+    }),
+  ]);
+
+  const medianByCounty: Record<string, { sum: number; count: number }> = {};
+  for (const m of medianRows) {
+    const agg = medianByCounty[m.county] ?? { sum: 0, count: 0 };
+    agg.sum += m.value;
+    agg.count += 1;
+    medianByCounty[m.county] = agg;
+  }
+
+  const incomeByGeo: Record<string, number> = {};
+  for (const r of incomeRows) incomeByGeo[r.geography] = r.value;
+
+  return Object.keys(medianByCounty)
+    .sort((a, b) => a.localeCompare(b))
+    .map((county) => {
+      const { sum, count } = medianByCounty[county];
+      const medianPrice = count > 0 ? sum / count : null;
+      const income = incomeByGeo[incomeGeographyForCounty(county)] ?? null;
+      const ratio = medianPrice && income ? medianPrice / income : null;
+      return { county, year, medianPrice, income, ratio };
+    });
+}
+
+/** Available years for the affordability explorer: years that have median price data. */
+export async function getAffordabilityYears(): Promise<number[]> {
+  if (isBuildPhase()) return [];
+  const prisma = await getDb();
+  const rows = await prisma.medianPriceCache.findMany({
+    distinct: ["period"],
+    select: { period: true },
+    orderBy: { period: "asc" },
+  });
+  const years = new Set<number>();
+  for (const r of rows) {
+    const y = Number(r.period.slice(0, 4));
+    if (Number.isInteger(y)) years.add(y);
+  }
+  return [...years].sort((a, b) => a - b);
+}
+
+/** Latest year with CSO RAA02 income data. */
+export async function getLatestIncomeYear(): Promise<number | null> {
+  if (isBuildPhase()) return null;
+  const prisma = await getDb();
+  const row = await prisma.historicalMetric.findFirst({
+    where: { source: "CSO_RAA02", metric: "income_disposable_person" },
+    orderBy: { period: "desc" },
+    select: { period: true },
+  });
+  return row ? Number(row.period) : null;
+}
+
+/** CSO RAA02 disposable income per person, per year, for the given counties. */
+export async function getIncomeHistory(counties: string[]): Promise<Array<{ geography: string; period: string; value: number }>> {
+  if (isBuildPhase()) return [];
+  if (counties.length === 0) return [];
+  const prisma = await getDb();
+  const rows = await prisma.historicalMetric.findMany({
+    where: {
+      source: "CSO_RAA02",
+      metric: "income_disposable_person",
+      geography: { in: counties },
+    },
+    orderBy: { period: "asc" },
+    select: { geography: true, period: true, value: true },
+  });
+  return rows;
+}
+
+export type MortgageRatePoint = {
+  period: string;
+  overall: number;
+  floating: number;
+  over_1y_fixed: number;
+  aprc: number;
+};
+
+/** Monthly Irish new-business mortgage rates (CBI B.2.1), merged per period. */
+export async function getMortgageRateHistory(): Promise<MortgageRatePoint[]> {
+  if (isBuildPhase()) return [];
+  const prisma = await getDb();
+  const rows = await prisma.historicalMetric.findMany({
+    where: { source: "CBI_B21", geography: "Ireland" },
+    orderBy: { period: "asc" },
+    select: { period: true, metric: true, value: true },
+  });
+
+  const byPeriod: Record<string, Record<string, number>> = {};
+  for (const r of rows) {
+    byPeriod[r.period] ??= {};
+    byPeriod[r.period][r.metric] = r.value;
+  }
+
+  return Object.entries(byPeriod)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([period, m]) => ({
+      period,
+      overall: m.mortgage_rate_overall ?? 0,
+      floating: m.mortgage_rate_floating_le_1y ?? 0,
+      over_1y_fixed: m.mortgage_rate_over_1y_fixed ?? 0,
+      aprc: m.mortgage_rate_aprc ?? 0,
+    }));
+}
+
+/** Average of the monthly overall new-business rate across a calendar year (%). */
+export function averageRateForYear(history: MortgageRatePoint[], year: number): number | null {
+  const points = history.filter((p) => p.period.startsWith(`${year}M`) && p.overall > 0);
+  if (points.length === 0) return null;
+  return points.reduce((sum, p) => sum + p.overall, 0) / points.length;
+}
+
+export type MortgageProductMixPoint = {
+  period: string;
+  /** Volume-weighted average new-business PDH rate (%) for the quarter. */
+  weightedRate: number | null;
+  /** Share of new-business PDH volume by product family (%). */
+  fixedSharePct: number | null;
+  trackerSharePct: number | null;
+  variableSharePct: number | null;
+};
+
+const PDH_SEGMENTS = [
+  { metric: "mortgage_rate_pdh_floating", volume: "mortgage_volume_pdh_floating", key: "variable" },
+  { metric: "mortgage_rate_pdh_tracker", volume: "mortgage_volume_pdh_tracker", key: "tracker" },
+  { metric: "mortgage_rate_pdh_fixed_le_1y", volume: "mortgage_volume_pdh_fixed_le_1y", key: "fixed" },
+  { metric: "mortgage_rate_pdh_fixed_1_3y", volume: "mortgage_volume_pdh_fixed_1_3y", key: "fixed" },
+  { metric: "mortgage_rate_pdh_fixed_over_3y", volume: "mortgage_volume_pdh_fixed_over_3y", key: "fixed" },
+] as const;
+
+/**
+ * Quarterly PDH new-business mortgage split (CBI B.3.1). Combines rate + volume
+ * rows into per-quarter points: a volume-weighted average rate and the share of
+ * new lending by product family (fixed / tracker / variable).
+ */
+export async function getMortgageProductMix(): Promise<MortgageProductMixPoint[]> {
+  if (isBuildPhase()) return [];
+  const prisma = await getDb();
+  const rows = await prisma.historicalMetric.findMany({
+    where: { source: "CBI_B31", geography: "Ireland" },
+    orderBy: { period: "asc" },
+    select: { period: true, metric: true, value: true },
+  });
+
+  const byPeriod: Record<string, Record<string, number>> = {};
+  for (const r of rows) {
+    byPeriod[r.period] ??= {};
+    byPeriod[r.period][r.metric] = r.value;
+  }
+
+  return Object.entries(byPeriod)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([period, m]) => {
+      let weightedNum = 0;
+      let totalVolume = 0;
+      const familyVolume: Record<string, number> = { fixed: 0, tracker: 0, variable: 0 };
+
+      for (const seg of PDH_SEGMENTS) {
+        const volume = m[seg.volume];
+        const rate = m[seg.metric];
+        if (typeof volume !== "number" || volume <= 0) continue;
+        totalVolume += volume;
+        familyVolume[seg.key] += volume;
+        if (typeof rate === "number") weightedNum += rate * volume;
+      }
+
+      const pct = (key: string) => (totalVolume > 0 ? (familyVolume[key] / totalVolume) * 100 : null);
+
+      return {
+        period,
+        weightedRate: totalVolume > 0 ? weightedNum / totalVolume : null,
+        fixedSharePct: pct("fixed"),
+        trackerSharePct: pct("tracker"),
+        variableSharePct: pct("variable"),
+      };
+    });
+}

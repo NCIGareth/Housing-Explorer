@@ -1,5 +1,11 @@
 import { PrismaClient } from "@prisma/client";
-import { buildPprFilterWhere, mergeSeriesByPeriod } from "@/lib/queries";
+import {
+  DUBLIN_COUNTIES,
+  averageRateForYear,
+  buildPprFilterWhere,
+  incomeGeographyForCounty,
+  mergeSeriesByPeriod,
+} from "@/lib/queries";
 import { isEircodeKey } from "@/lib/area";
 
 describe("Query helpers (unit)", () => {
@@ -189,6 +195,26 @@ describe("Query helpers (unit)", () => {
       const result = buildSearch(injection);
       expect(result.params[0]).toBe("%test' OR '1'='1%");
       expect(result.sql).toBe(`SELECT * FROM "PropertySale" WHERE address ILIKE $1`);
+    });
+  });
+
+  describe("Affordability helpers", () => {
+    it("maps the four Dublin PPR counties to RAA02 Dublin income", () => {
+      expect(incomeGeographyForCounty("Fingal")).toBe("Dublin");
+      expect(incomeGeographyForCounty("South Dublin")).toBe("Dublin");
+      expect(incomeGeographyForCounty("Cork")).toBe("Cork");
+      expect(DUBLIN_COUNTIES).toContain("Dún Laoghaire–Rathdown");
+    });
+
+    it("averages the monthly overall rate across a year", () => {
+      const history = [
+        { period: "2023M12", overall: 3.0, floating: 3.5, over_1y_fixed: 3.2, aprc: 3.1 },
+        { period: "2024M01", overall: 4.0, floating: 4.5, over_1y_fixed: 3.8, aprc: 3.9 },
+        { period: "2024M02", overall: 5.0, floating: 5.5, over_1y_fixed: 4.8, aprc: 4.9 },
+        { period: "2025M01", overall: 2.0, floating: 2.5, over_1y_fixed: 2.2, aprc: 2.1 },
+      ];
+      expect(averageRateForYear(history, 2024)).toBeCloseTo(4.5, 5);
+      expect(averageRateForYear(history, 2010)).toBeNull();
     });
   });
 });

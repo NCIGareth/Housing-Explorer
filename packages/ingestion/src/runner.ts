@@ -20,6 +20,8 @@ if (process.env.DATABASE_URL) {
 
 // 3. Import logic that DOES NOT depend on Prisma at the top level
 import { fetchCsoMetrics, fetchCsoCrimeMetrics, upsertCsoMetrics } from "./modules/cso";
+import { fetchCsoIncomeMetrics } from "./modules/income";
+import { fetchCbiMortgageRates } from "./modules/cbi";
 import { logError, logInfo } from "./lib/logger";
 import type { PrismaClient } from "@housing/db";
 
@@ -72,6 +74,8 @@ async function runAllIngestion() {
 
   await runIngestion("CSO", async () => upsertCsoMetrics(prisma, await fetchCsoMetrics()));
   await runIngestion("CSO_CRIME", async () => upsertCsoMetrics(prisma, await fetchCsoCrimeMetrics()));
+  await runIngestion("CSO_INCOME", async () => upsertCsoMetrics(prisma, await fetchCsoIncomeMetrics()));
+  await runIngestion("CBI_MORTGAGE_RATES", async () => upsertCsoMetrics(prisma, await fetchCbiMortgageRates()));
 }
 
 // 5. The "Brain" - Controls the sequence

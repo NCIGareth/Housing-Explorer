@@ -1,6 +1,6 @@
 import { validateHistoricalMetrics } from "../lib/quality";
 
-type CsoMetric = {
+export type CsoMetric = {
   source: string;
   metric: string;
   geography: string;
